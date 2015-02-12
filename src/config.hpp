@@ -18,14 +18,17 @@ class DBFWConfig {
         static DBFWConfig * getInstance();
         static void free();
         bool load (std::string &);
-        bool load_db ();
-        
+        bool loadDb ();
+
+        int log_level;
+        std::string log_file;
+
     private:
     	static DBFWConfig * _obj;
         DBFWConfig ();
         ~DBFWConfig ();
         void init ();
-        
+
 };
 
 #endif /* DBFW_CONFIG_HPP */

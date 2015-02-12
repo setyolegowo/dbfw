@@ -39,6 +39,6 @@ void DBFWConfig::init() {
 bool DBFWConfi::load(std::string & path) {
 }
 
-bool DBFWConfi::load_db() {
+bool DBFWConfi::loadDb() {
 }
 

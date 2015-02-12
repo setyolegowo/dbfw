@@ -37,30 +37,30 @@ int main (int argc, char** argv)
     
     fix_dir_name(conf_path);
     if (cfg->load(conf_path) == false)
-	{
+    {
         fprintf(stderr, "Failed to load config file: %s/dbfw.conf\n\n", 
-			    conf_path.c_str());
-	    fprintf(stderr, "Specify location of the conf. file using \"-p\" parameter.\n\n");
-	    fprintf(stderr, "Usage: %s -p DIRECTORY\n\n", argv[0]);
-	    fprintf(stderr, "DIRECTORY is a location of the config files\n");
-	    return -1;
-	}
-	if (cfg->load_db() == false) {
-	    fprintf(stderr, "Failed to connect to db storage.\n");
-	    return -1;
-	}
-	
-	/* START OF RULES INIT
-	if (mysql_rules_init(conf_path) == false) {
-	    fprintf(stderr, "Failed to load MySQL list of rules.\n");
-	    return -1;
-	}
-	if (pgsql_rules_init(conf_path) == false) {
-	    fprintf(stderr, "Failed to load PGSQL list of rules.\n");
-	    return -1;
-	} /* END OF RULES INIT */
-	
-	return 0;
+                conf_path.c_str());
+        fprintf(stderr, "Specify location of the conf. file using \"-p\" parameter.\n\n");
+        fprintf(stderr, "Usage: %s -p DIRECTORY\n\n", argv[0]);
+        fprintf(stderr, "DIRECTORY is a location of the config files\n");
+        return -1;
+    }
+    if (cfg->load_db() == false) {
+        fprintf(stderr, "Failed to connect to db storage.\n");
+        return -1;
+    }
+    
+    /* START OF RULES INIT
+    if (mysql_rules_init(conf_path) == false) {
+        fprintf(stderr, "Failed to load MySQL list of rules.\n");
+        return -1;
+    }
+    if (pgsql_rules_init(conf_path) == false) {
+        fprintf(stderr, "Failed to load PGSQL list of rules.\n");
+        return -1;
+    } /* END OF RULES INIT */
+    
+    return 0;
 }
 
 /* ---------------------------------------------------------------- */
@@ -126,19 +126,18 @@ int parameterCheck(int argc, char** argv)
     if (argc > 2) {
         if (strcmp(argv[1], "-p") == 0) {
             conf_path = argv[2];
-			return 0;
-	    } else {
+            return 0;
+        } else {
            fprintf(stderr, "Unrecognized parameter\n\n");
-	       fprintf(stderr, "Usage: %s -p DIRECTORY\n\n", argv[0]); 
-	       fprintf(stderr, "DIRECTORY is a location of the config files\n");
-	       return -1;
-	    }
-	} else if (argc > 1) {
+           fprintf(stderr, "Usage: %s -p DIRECTORY\n\n", argv[0]); 
+           fprintf(stderr, "DIRECTORY is a location of the config files\n");
+           return -1;
+        }
+    } else if (argc > 1) {
         fprintf(stderr, "Unrecognized parameter\n\n");
         fprintf(stderr, "Usage: %s -p DIRECTORY\n\n", argv[0]);
-	    fprintf(stderr, "DIRECTORY is a location of the config files\n");
+        fprintf(stderr, "DIRECTORY is a location of the config files\n");
         return -1;
-	} else
-	    return 0;
+    } else
+        return 0;
 }
-
