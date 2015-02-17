@@ -14,6 +14,7 @@
 #include <string>
 
 enum DBProxyType { DBTypeMySQL, DBTypePGSQL };
+enum DBBackEnd { DB_MYSQL = 1, DB_PGSQL = 2 };
 
 class DBFWConfig {
     public:
@@ -21,6 +22,7 @@ class DBFWConfig {
         static void free();
         bool load (std::string &);
         bool loadDb ();
+        bool closeDb ();
 
         int log_level;
         std::string log_file;

@@ -33,7 +33,6 @@ void DBPermObj::Init(std::string name, unsigned int id, long long p,
         block_q_perm = true;
     if (perms & (int)BRUTEFORCE_Q)
         bruteforce_perm = true;
-    return;
 }
 
 DBPermObj::~DBPermObj()
@@ -53,14 +52,14 @@ bool DBPermObj::LoadWhitelist()
 
     /* read new exceptions from the database */
     if (! db_query(&db,q,1024)) {
-        logevent(STORAGE,"DB config erorr: %s\n",db_error());
+        logEvent(STORAGE,"DB config erorr: %s\n",db_error());
         db_cleanup(&db);
         return false;
-    } 
+    }
 
     int perm = 0;
     std::string q_ex = "";
-        
+
     /* Get a row from the results */
     while (db_fetch_row(&db))
     {
@@ -69,7 +68,7 @@ bool DBPermObj::LoadWhitelist()
 
         if (perm > 0 && q_ex.length() > 0)
         {
-            //q_list[q_ex] = perm;        
+            //q_list[q_ex] = perm;
             q_list.insert(std::pair<std::string, int>(q_ex, perm));
         }
     }

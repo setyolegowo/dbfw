@@ -20,7 +20,7 @@ Buffer::~Buffer()
     //std::cout << "buffer destructor" << std::endl;
     _buff.clear();
 }
-    
+
 bool Buffer::append(const char * data, int size)
 {
         if (size <= 0)
@@ -48,7 +48,6 @@ bool Buffer::pop(std::string & res, int size,bool appendval)
 	return true;
 }
 
-//return raw data
 const unsigned char * Buffer::raw()
 {
         return (const unsigned char *)_buff.c_str();
@@ -58,5 +57,4 @@ int Buffer::size()
 {
         return (int)_buff.size();
 }
-
 

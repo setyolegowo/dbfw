@@ -11,9 +11,9 @@
 #include <string>
 #include <pcre.h>
 
-enum MatchType { SQL_ALTER, SQL_CREATE, SQL_DROP, 
+enum MatchType { SQL_ALTER, SQL_CREATE, SQL_DROP,
 	         SQL_INFO, SQL_BLOCK, SQL_S_TABLES,
-                 SQL_EMPTY_PWD, SQL_VAR_CMP, 
+                 SQL_EMPTY_PWD, SQL_VAR_CMP,
 		 SQL_TRUE_CONSTANTS, SQL_BRUTEFORCE_FUNCTIONS };
 
 class SQLPatterns
@@ -32,7 +32,7 @@ private:
     void clear();
     void free();
     bool compile_pattern(std::string & str, pcre ** _re, pcre_extra ** _pe );
-    
+
     std::string alter_str;
     std::string create_str;
     std::string drop_str;
@@ -44,7 +44,7 @@ private:
     std::string true_constants_str;
     std::string bruteforce_functions_str;
 
-    //regular expression patterns 
+    //regular expression patterns
 
     pcre * alter_re;
     pcre * create_re;

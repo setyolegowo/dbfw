@@ -12,11 +12,11 @@
 #include <map>
 
 enum DBBlockStatus {
-    RISK_BLOCK          = 0,      // block based on the risk calculation 
-    PRIVILEGE_BLOCK     = 1,      // block only admin and sensitive commands
-    RISK_SIMULATION     = 2,      // simulation mode for risk calculation
-    PRIVILEGE_SIMULATION= 3,      // simulation mode for sensitive commands
-    ALWAYS_BLOCK_NEW    = 4,      // block all new queries
+    RISK_BLOCK          =  0,      // block based on the risk calculation
+    PRIVILEGE_BLOCK     =  1,      // block only admin and sensitive commands
+    RISK_SIMULATION     =  2,      // simulation mode for risk calculation
+    PRIVILEGE_SIMULATION=  3,      // simulation mode for sensitive commands
+    ALWAYS_BLOCK_NEW    =  4,      // block all new queries
     LEARNING_MODE       = 10,      // automatically approve all queries
     LEARNING_MODE_3DAYS = 11,      //    ... for 3 days
     LEARNING_MODE_7DAYS = 12,      //    ... for 7 days
@@ -42,7 +42,7 @@ enum DBPerms {
 class DBPermObj
 {
 public:
-    DBPermObj(): create_perm(false), 
+    DBPermObj(): create_perm(false),
                  drop_perm(false),
                  alter_perm(false),
                  info_perm(false),
@@ -56,10 +56,9 @@ public:
     ~DBPermObj();
 
     void Init(std::string name, unsigned int id, long long perms,
-            long long perms2, unsigned int status);
-    
+              long long perms2, unsigned int status);
     bool LoadWhitelist();
-    int CheckWhitelist(std::string & q);
+    int  CheckWhitelist(std::string & q);
     bool AddToWhitelist(std::string & dbuser, std::string & pattern);
 
     bool CanCreate()
@@ -90,8 +89,9 @@ public:
     {
         return perms;
     }
-	std::string db_name;
-private: 
+    std::string db_name;
+
+private:
     long long perms;
     bool create_perm;
     bool drop_perm;
@@ -100,11 +100,11 @@ private:
     bool block_q_perm;
     bool bruteforce_perm;
     DBBlockStatus block_status;
-    
+
     std::string db_type;
     unsigned int proxy_id;
-    std::map<std::string, int, std::less<std::string>  > exceptions;
-    
+    std::map< std::string, int, std::less<std::string> > exceptions;
+
 };
 
 #endif

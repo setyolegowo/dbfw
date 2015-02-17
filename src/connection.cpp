@@ -25,8 +25,8 @@ Connection::Connection(int proxy_id)
     db_user = "";
     db_type = "";
     db_user_ip = "";
-	SecondPacket = false;
-	first_response = true;
+    SecondPacket = false;
+    first_response = true;
 }
 
 bool Connection::close()
