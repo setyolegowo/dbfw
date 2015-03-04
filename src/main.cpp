@@ -1,6 +1,6 @@
 //
 // Database Firewall
-// 
+//
 // Created by  : Setyo Legowo (13511071@std.stei.itb.ac.id)
 // Institution : Institut Teknologi Bandung
 // License     : GPL v2 (http://www.gnu.org/licenses/gpl-2.0.html)
@@ -13,6 +13,7 @@
 #include <ev.h>
 
 #include "dbfw.hpp"
+#include "config.hpp"
 
 /* ---------------------------------------------------------------- */
 /*                   INTERNAL FUNCTION DEFINITION                   */
@@ -21,7 +22,7 @@
 static bool fix_dir_name (std::string &);
 int initLinux ();
 // void clb_timeout (int, short, void *);
-int parameterCheck (int, char **);
+int parameterCheck (int, char **, std::string &);
 void killer (int);
 
 /* ---------------------------------------------------------------- */
@@ -32,20 +33,17 @@ int main (int argc, char** argv)
 {
     DBFWConfig * cfg = DBFWConfig::getInstance();
     std::string conf_path = "";
-    if(parameterCheck(argc, argv) < 0)
+    if(parameterCheck(argc, argv, conf_path) < 0)
         return -1;
     
     fix_dir_name(conf_path);
-    if (cfg->load(conf_path) == false)
-    {
-        fprintf(stderr, "Failed to load config file: %s/dbfw.conf\n\n", 
-                conf_path.c_str());
-        fprintf(stderr, "Specify location of the conf. file using \"-p\" parameter.\n\n");
+    if (cfg->load(conf_path) == false) {
+        fprintf(stderr, "Specify location of the configuration file using \"-p\" parameter.\n\n");
         fprintf(stderr, "Usage: %s -p DIRECTORY\n\n", argv[0]);
         fprintf(stderr, "DIRECTORY is a location of the config files\n");
         return -1;
     }
-    if (cfg->load_db() == false) {
+    if (cfg->loadDb() == false) {
         fprintf(stderr, "Failed to connect to db storage.\n");
         return -1;
     }
@@ -59,6 +57,8 @@ int main (int argc, char** argv)
         fprintf(stderr, "Failed to load PGSQL list of rules.\n");
         return -1;
     } /* END OF RULES INIT */
+
+    killer(0);
     
     return 0;
 }
@@ -81,10 +81,10 @@ static bool fix_dir_name (std::string & conf_dir)
 int initLinux()
 {
     signal(SIGPIPE, SIG_IGN);
-    signal(SIGQUIT, Killer);
-    signal(SIGHUP, Killer);
-    signal(SIGINT, Killer);
-    signal(SIGTERM, Killer);
+    signal(SIGQUIT, killer);
+    signal(SIGHUP, killer);
+    signal(SIGINT, killer);
+    signal(SIGTERM, killer);
     return 1;
 }
 
@@ -116,12 +116,12 @@ void clb_timeout(int fd, short which, void * arg)
 
 void killer(int)
 {
-    logevent(CRIT, "Killer\n");
+    logEvent(CRIT, "Killer fired\n");
     DBFWConfig * cfg = DBFWConfig::getInstance();
-    cfg->bRunning = false;
+    // cfg->bRunning = false;
 }
 
-int parameterCheck(int argc, char** argv)
+int parameterCheck(int argc, char** argv, std::string & conf_path)
 {
     if (argc > 2) {
         if (strcmp(argv[1], "-p") == 0) {
@@ -139,5 +139,5 @@ int parameterCheck(int argc, char** argv)
         fprintf(stderr, "DIRECTORY is a location of the config files\n");
         return -1;
     } else
-        return 0;
+        return -1;
 }

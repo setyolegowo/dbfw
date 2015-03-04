@@ -15,6 +15,7 @@ class Buffer
 {
 private:
 	std::string _buff;
+
 public:
 	Buffer();
 	~Buffer();
@@ -27,9 +28,10 @@ public:
 	//return raw data
 	const unsigned char * raw();
 	//find string in buffer
-	unsigned int FindSubString(const std::string& value,unsigned int start = 0){return (unsigned)_buff.find(value,start);}
+	unsigned int findSubString(const std::string& value,unsigned int start = 0){return (unsigned)_buff.find(value,start);}
 	int size();
 
 };
+
 #endif
 

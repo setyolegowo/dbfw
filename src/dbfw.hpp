@@ -9,6 +9,10 @@
 #ifndef DBFW_FIREWALL_HPP
 #define DBFW_FIREWALL_HPP
 
+// #include "connection.hpp"
+#include "log.hpp"
+#include "config.hpp"
+
 class DBFW {
     public:
         DBFW();
