@@ -103,7 +103,6 @@ void logEvent (ErrorType type, const char * fmt, ...)
 
     vfprintf ( log_file, fmt, ap );
     va_end (ap);
-    fprintf(log_file, "\n");
     fflush (log_file);
 }
 

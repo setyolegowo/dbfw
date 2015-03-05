@@ -8,6 +8,10 @@
 
 #include "dbfw.hpp"
 
+#include <ev.h>
+
+extern struct ev_loop *global_loop;
+
 DBFW::DBFW()
 {}
 

@@ -15,13 +15,15 @@
 #include "dbfw.hpp"
 #include "config.hpp"
 
+struct ev_loop *global_loop;
+
 /* ---------------------------------------------------------------- */
 /*                   INTERNAL FUNCTION DEFINITION                   */
 /* ---------------------------------------------------------------- */
 
 static bool fix_dir_name (std::string &);
+static void timeout_cb (EV_P_ struct ev_timer *, int);
 int initLinux ();
-// void clb_timeout (int, short, void *);
 int parameterCheck (int, char **, std::string &);
 void killer (int);
 
@@ -43,12 +45,18 @@ int main (int argc, char** argv)
         fprintf(stderr, "DIRECTORY is a location of the config files\n");
         return -1;
     }
+    if(_logInit() == false) {
+    	fprintf(stderr, "Failed to open log file %s\n", cfg->log_file.c_str());
+    	return -1;
+    }
+
+    logEvent(INFO, "Application started\n");
+
     if (cfg->loadDb() == false) {
         fprintf(stderr, "Failed to connect to db storage.\n");
         return -1;
     }
-    
-    /* START OF RULES INIT
+    /* DBMS RULES INIT
     if (mysql_rules_init(conf_path) == false) {
         fprintf(stderr, "Failed to load MySQL list of rules.\n");
         return -1;
@@ -56,9 +64,13 @@ int main (int argc, char** argv)
     if (pgsql_rules_init(conf_path) == false) {
         fprintf(stderr, "Failed to load PGSQL list of rules.\n");
         return -1;
-    } /* END OF RULES INIT */
+    } /* END OF DBMS RULES */
 
-    killer(0);
+    initLinux();
+
+    global_loop = ev_default_loop ( EVFLAG_AUTO );
+
+    // ev_run (loop, 0);
     
     return 0;
 }
@@ -88,37 +100,18 @@ int initLinux()
     return 1;
 }
 
-/*
-void clb_timeout(int fd, short which, void * arg)
+/* void timeout_cb (EV_P_ struct ev_timer *w, int revents)
 {
-    struct timeval delay;
-    delay.tv_sec=1;
-    delay.tv_usec=0;
-
-    struct event * tEvent = (struct event*) arg;
-
-    GreenSQLConfig * cfg = GreenSQLConfig::getInstance();
-
-    //logevent(INFO, "timer fired\n");
-    if (cfg->bRunning == false) {
-        proxymap_close();
-    } else {
-        counter++;
-        if (counter == 5) {
-            //logevent(INFO, "Timer fired 1000 times\n");
-            counter = 0;
-            proxymap_reload();
-            dbmap_reload();
-            agroupmap_reload();
-        }
-    }
+    puts ("timeout");
+    // this causes the innermost ev_run to stop iterating
+    ev_break (EV_A_ EVBREAK_ONE);
 } */
 
 void killer(int)
 {
     logEvent(CRIT, "Killer fired\n");
     DBFWConfig * cfg = DBFWConfig::getInstance();
-    // cfg->bRunning = false;
+    cfg->server_running = false;
 }
 
 int parameterCheck(int argc, char** argv, std::string & conf_path)
@@ -139,5 +132,5 @@ int parameterCheck(int argc, char** argv, std::string & conf_path)
         fprintf(stderr, "DIRECTORY is a location of the config files\n");
         return -1;
     } else
-        return -1;
+        return 0;
 }

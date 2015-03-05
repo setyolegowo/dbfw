@@ -41,6 +41,8 @@ void DBFWConfig::free() {
 
 void DBFWConfig::init()
 {
+    server_running      = true;
+    
     re_block_level      = 30;
     re_warn_level       = 20;
     re_sql_comments     = 30;
@@ -54,7 +56,6 @@ void DBFWConfig::init()
     re_bruteforce       = 15;
     
     log_level           = 3;
-
     log_file            = "/var/log/greensql.log";
 }
 

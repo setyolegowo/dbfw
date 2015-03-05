@@ -23,6 +23,7 @@ class DBFWConfig {
         bool load (std::string &);
         bool loadDb ();
         bool closeDb ();
+        bool server_running;
 
         // risk engine factors
         int re_block_level;
