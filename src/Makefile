@@ -1,12 +1,13 @@
-OBJS:=main.o config.o dbfw.o log.o misc.o
+OBJS:=mysql/mysql_con.o connection.o proxymap.o config.o dbfw.o log.o misc.o buffer.o main.o
 
-CPP=g++
-CFLAGS:=-g -Wall
+# CPP=g++
+CXXFLAGS:=-g -Wall
+LIB=-lev
 
 dbfw: $(OBJS)
 # cd parser; make
 # cd lib; make
-	$(CXX) $(CFLAGS) -o dbfw $(OBJS)
+	$(CXX) $(CXXFLAGS) -o dbfw $(OBJS) $(LIB)
 
 # mysql/mysql_con.o:
 # $(CXX) $(CFLAGS) -c mysql/mysql_con.cpp -o mysql/mysql_con.o

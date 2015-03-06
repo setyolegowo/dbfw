@@ -1,7 +1,7 @@
 //
-// GreenSQL MySQL Connection class header.
+// DBFW MySQL Connection class header.
 //
-// Copyright (c) 2007 GreenSQL.NET <stremovsky@gmail.com>
+// Copyright (c) 2015 Setyo Legowo <13511071@std.stei.itb.ac.id>
 // License: GPL v2 (http://www.gnu.org/licenses/gpl.html)
 //
 
@@ -10,8 +10,6 @@
 
 #include "../connection.hpp"
 #include "../log.hpp"
-
-bool mysql_patterns_init(std::string & path);
 
 enum MySQLType {
     /* client requests */
@@ -76,23 +74,23 @@ enum MySQLCap {
 
 class MySQLConnection: public Connection
 {
-public:
-    MySQLConnection  ( int );
-    ~MySQLConnection ();
-    bool checkBlacklist ( std::string &, std::string & );
-    bool parseRequest   ( std::string &, bool & );
-    bool parseResponse  ( std::string &);
-    bool blockResponse  ( std::string &);
-    SQLPatterns * getSQLPatterns();
-    bool ParseRequestPacket  (const unsigned char *, size_t &, bool & );
-    bool ParseResponsePacket (const unsigned char *, size_t &, size_t, std::string &, size_t & );
+    public:
+        MySQLConnection  ( int );
+        ~MySQLConnection ();
+        // bool checkBlacklist ( std::string &, std::string & );
+        // bool parseRequest   ( std::string &, bool & );
+        // bool parseResponse  ( std::string &);
+        // bool blockResponse  ( std::string &);
+        // SQLPatterns * getSQLPatterns();
+        // bool ParseRequestPacket  (const unsigned char *, size_t &, bool & );
+        // bool ParseResponsePacket (const unsigned char *, size_t &, size_t, std::string &, size_t & );
 
-    /* DATA */
-    bool mysql41;
-    bool longResponse;
-    bool longResponseData;
-    MySQLType lastCommandId;
-    bool StartResponse;
+        /* DATA */
+        bool mysql41;
+        bool longResponse;
+        bool longResponseData;
+        MySQLType lastCommandId;
+        bool StartResponse;
 };
 
 #endif

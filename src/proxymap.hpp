@@ -8,14 +8,12 @@
 #ifndef _DBFW_PROXYMAP_HPP_
 #define _DBFW_PROXYMAP_HPP_
 
-#include <ev.h>
-
 bool proxyMapInit   ();
 bool proxyMapReload ();
 bool proxyMapClose  ();
-void wrapServer     (struct ev_loop *loop, ev_io *w_, int revents);
-void wrapProxy      (struct ev_loop *loop, ev_io *w_, int revents);
-void wrapBackend    (struct ev_loop *loop, ev_io *w_, int revents);
+// void wrapServer     (struct ev_loop *loop, ev_io *w_, int revents);
+// void wrapProxy      (struct ev_loop *loop, ev_io *w_, int revents);
+// void wrapBackend    (struct ev_loop *loop, ev_io *w_, int revents);
 // bool proxymap_set_db_status(unsigned int proxy_id, int status );
 
 #endif

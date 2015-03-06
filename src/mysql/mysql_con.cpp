@@ -7,32 +7,25 @@
 
 #include "mysql_con.hpp"
 
-#include "../normalization.hpp"
+// #include "../normalization.hpp"
 #include "../config.hpp"
-#include "../dbmap.hpp"
+// #include "../dbmap.hpp"
 
-static SQLPatterns mysql_patterns;
+// static SQLPatterns mysql_patterns;
 
-bool mysql_patterns_init(std::string & path)
-{
-    std::string file = path + "mysql.conf";
-
-    return mysql_patterns.Load(file);
-}
-
-SQLPatterns * MySQLConnection::getSQLPatterns()
-{
-    return & mysql_patterns;
-}
+// SQLPatterns * MySQLConnection::getSQLPatterns()
+// {
+//     return & mysql_patterns;
+// }
 
 MySQLConnection::MySQLConnection(int id): Connection(id)
 {
     first_request = true;
     longResponse = false;
     longResponseData = false;
-    lastCommandId = (MySQLType)0;
+    lastCommandId = (MySQLType) 0;
     db_type = "mysql";
-    db = dbmap_default(id, db_type.c_str());
+    // db = dbmap_default(id, db_type.c_str());
     mysql41 = false;
     StartResponse = false;
 }
@@ -89,7 +82,7 @@ bool MySQLConnection::checkBlacklist(std::string & query, std::string & reason)
     }
     return bad;
 } */
-
+/*
 bool MySQLConnection::parseRequest(std::string & request, bool & hasResponse)
 {
     size_t full_size = request_in.size();
@@ -677,3 +670,4 @@ bool MySQLConnection::ParseResponsePacket(const unsigned char* data,size_t& resp
 	header_size = response_size;
 	return true;
 }
+*/

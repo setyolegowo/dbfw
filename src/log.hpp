@@ -14,8 +14,8 @@
 enum ErrorType { CRIT, ERR, INFO, SQL_DEBUG, DEBUG, STORAGE, NET_DEBUG };
 
 bool _logInit  ();
-bool logInit  (std::string & file, int level);
-bool logClose ();
+bool logInit   (std::string & file, int level);
+bool logClose  ();
 void logEvent  (ErrorType type, const char * fmt, ...);
 void logHex    (ErrorType type, const unsigned char * data, int size);
 

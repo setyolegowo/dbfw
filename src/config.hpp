@@ -20,7 +20,8 @@ class DBFWConfig {
     public:
         static DBFWConfig * getInstance();
         static void free();
-        bool load (std::string &);
+        std::string conf_path;
+        bool load ();
         bool loadDb ();
         bool closeDb ();
         bool server_running;

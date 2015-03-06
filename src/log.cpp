@@ -96,7 +96,7 @@ void logEvent (ErrorType type, const char * fmt, ...)
             break;
     }
 
-    // logReload();
+    logReload();
     fprintf ( log_file, "[%02d/%s/%02d %d:%02d:%02d] %s",
               now->tm_mday, month_str[now->tm_mon], now->tm_year+1900,
               now->tm_hour, now->tm_min, now->tm_sec, error );
@@ -150,7 +150,7 @@ void logHex (ErrorType type, const unsigned char * data, int size)
     int lines = size / 16;
     int i = 0;
 
-    // logReload();
+    logReload();
 
     for ( i = 0; i < lines; i++ ) {
         // fprintf(log_file, error);

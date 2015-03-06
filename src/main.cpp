@@ -11,18 +11,18 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <ev.h>
+#include <ev++.h>
 
 #include "dbfw.hpp"
 #include "config.hpp"
-
-struct ev_loop *global_loop;
+#include "proxymap.hpp"
 
 /* ---------------------------------------------------------------- */
 /*                   INTERNAL FUNCTION DEFINITION                   */
 /* ---------------------------------------------------------------- */
 
 static bool fix_dir_name (std::string &);
-static void timeout_cb (EV_P_ struct ev_timer *, int);
+// static void timeout_cb (EV_P_ struct ev_timer *, int);
 int initLinux ();
 int parameterCheck (int, char **, std::string &);
 void killer (int);
@@ -35,19 +35,19 @@ int main (int argc, char** argv)
 {
     DBFWConfig * cfg = DBFWConfig::getInstance();
     std::string conf_path = "";
-    if(parameterCheck(argc, argv, conf_path) < 0)
+    if(parameterCheck(argc, argv, cfg->conf_path) < 0)
         return -1;
     
-    fix_dir_name(conf_path);
-    if (cfg->load(conf_path) == false) {
+    fix_dir_name(cfg->conf_path);
+    if (cfg->load() == false) {
         fprintf(stderr, "Specify location of the configuration file using \"-p\" parameter.\n\n");
         fprintf(stderr, "Usage: %s -p DIRECTORY\n\n", argv[0]);
         fprintf(stderr, "DIRECTORY is a location of the config files\n");
         return -1;
     }
     if(_logInit() == false) {
-    	fprintf(stderr, "Failed to open log file %s\n", cfg->log_file.c_str());
-    	return -1;
+        fprintf(stderr, "Failed to open log file %s\n", cfg->log_file.c_str());
+        return -1;
     }
 
     logEvent(INFO, "Application started\n");
@@ -64,14 +64,25 @@ int main (int argc, char** argv)
     if (pgsql_rules_init(conf_path) == false) {
         fprintf(stderr, "Failed to load PGSQL list of rules.\n");
         return -1;
-    } /* END OF DBMS RULES */
+    } END OF DBMS RULES */
 
     initLinux();
 
-    global_loop = ev_default_loop ( EVFLAG_AUTO );
+    ev::default_loop loop;
 
-    // ev_run (loop, 0);
-    
+    if (proxyMapInit() == false) {
+        logEvent(DEBUG, "Failed to open all server sockets, closing application\n");
+        exit(0);
+    }
+
+    // loop.run(0);
+
+    /* =================== AFTER RUN =================== */
+
+    proxyMapClose();
+    logClose();
+    DBFWConfig::free();
+
     return 0;
 }
 

@@ -59,12 +59,12 @@ void DBFWConfig::init()
     log_file            = "/var/log/greensql.log";
 }
 
-bool DBFWConfig::load(std::string & path)
+bool DBFWConfig::load()
 {
     std::string cfg_file;
     cfg_file.reserve(1024);
 
-    cfg_file = path;
+    cfg_file = conf_path;
     cfg_file += "dbfw.conf";
     
     std::ifstream file(cfg_file.c_str());
