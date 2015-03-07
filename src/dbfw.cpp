@@ -21,8 +21,8 @@
 #include <sys/types.h>
 
 static const int min_buf_size = 10240;
-static bool _proxyValidateClientRequest(Connection * conn);
-static bool _proxyValidateServerResponse(Connection * conn);
+static void _disableEventWriter(Connection * conn, bool proxy);
+static void _enableEventWriter(Connection * conn, bool proxy);
 static bool _socketRead(int fd, char * data, int & size);
 static bool _socketWrite(int fd, const char* data, int & size);
 
@@ -34,85 +34,35 @@ DBFW::~DBFW()
 
 bool DBFW::closeConnection()
 {
+    Connection * conn;
+    while ( v_conn.size() != 0)
+    {
+        conn = v_conn.front();
+        // we remove pointer to the conn object inside the close() function
+        conn->close();
+        delete conn;
+    }
+    v_conn.clear();
+
+    _closeServer();
     return true;
 }
 
-void DBFW::ioAccept(ev::io &watcher, int revents)
+void DBFW::_closeServer()
 {
-    if (EV_ERROR & revents) {
-        logEvent(ERR, "Got invalid event. Firewall id [%d]", proxy_id);
-        return;
-    }
-
-    Connection* conn = NULL;
-    int sfd = _socketAccept(watcher.fd);
-    if (sfd == -1)
-        return;
-
-    int cfd = _clientSocket(backend_ip.empty() ? backend_name : backend_ip, backend_port);
-    if (cfd == -1)
-    {
-        socketClose(sfd);
-        logEvent(NET_DEBUG, "Failed to connect to backend db server (%s:%d)\n", backend_name.c_str(), backend_port);
-        return;
-    }
-
-    logEvent(NET_DEBUG, "client (to backend db server) connection established\n");
-
-    if (db_type == DBTypeMySQL)
-    {
-        conn = new MySQLConnection(proxy_id);
-    } // else if (db_type == DBTypePGSQL)
-    // {
-    //     conn = new PgSQLConnection(proxy_id);
-    // }
-
-    struct sockaddr_storage ss;
-    size_t len = sizeof(struct sockaddr_storage);
-
-    logEvent(NET_DEBUG, "Database Firewall socket use: sfd=%d, cfd=%d\n", sfd, cfd);
-
-    conn->proxy_event.set<DBFW, &DBFW::proxyCB>(this);
-    conn->proxy_event_writer.set<DBFW, &DBFW::proxyCB>(this);
-    conn->proxy_event.start(sfd, ev::READ);
-
-    conn->backend_event.set<DBFW, &DBFW::backendCB>(this);
-    conn->backend_event_writer.set<DBFW, &DBFW::backendCB>(this);
-    conn->backend_event.start(cfd, ev::READ);
-
-    logEvent(NET_DEBUG, "size of the connection queue: %d\n", v_conn.size());
-
-    v_conn.push_front(conn);
-
-    conn->connections = &v_conn;
-    conn->location = v_conn.begin();
-
-    // get db user ip address
-    getpeername(sfd,(struct sockaddr*)&ss, (socklen_t*)&len);
-    if (ss.ss_family == AF_INET)
-    {
-        struct sockaddr_in *s = (struct sockaddr_in *)&ss;
-        conn->db_user_ip = inet_ntoa(s->sin_addr);
-    }
-    else if (ss.ss_family == AF_INET6)
-    {
-        struct sockaddr_in6 *s = (struct sockaddr_in6 *)&ss;
-        char ipstr[INET6_ADDRSTRLEN*2];
-        inet_ntop(AF_INET6, (void *)&s->sin6_addr, ipstr, sizeof(ipstr));
-        conn->db_user_ip = ipstr;
-    }
+    return;
 }
 
 bool DBFW::proxyInit(int _proxy_id, std::string& _proxy_ip, int _proxy_port,
             std::string& _backend_name, std::string& _backend_ip,
             int _backend_port, std::string& _db_type)
 {
-    proxy_id = _proxy_id;
+    proxy_id     = _proxy_id;
     backend_name = _backend_name;
-    backend_ip = _backend_ip;
+    backend_ip   = _backend_ip;
     backend_port = _backend_port;
-    proxy_ip = _proxy_ip;
-    proxy_port = _proxy_port;
+    proxy_ip     = _proxy_ip;
+    proxy_port   = _proxy_port;
     if (strcasecmp(_db_type.c_str(), "pgsql") == 0)
         db_type = DBTypePGSQL;
     else
@@ -126,26 +76,96 @@ bool DBFW::proxyInit(int _proxy_id, std::string& _proxy_ip, int _proxy_port,
     // event_set(&serverEvent, sfd, EV_READ | EV_WRITE | EV_PERSIST,
     //           wrap_Server, (void *)iProxyId);
     // event_add(&serverEvent, 0);
+    logEvent(V_DEBUG, "[%d] Server file descriptor socket initialized: sfd=%d\n", proxy_id, sfd);
     io.set<DBFW, &DBFW::ioAccept>(this);
     io.start(sfd, ev::READ|ev::WRITE);
 
     return true;
 }
 
-void DBFW::proxyCB(ev::io &watcher, int revents)
+void DBFW::ioAccept(ev::io &watcher, int revents)
 {
-    logEvent(DEBUG, "Proxy callback");
     if (EV_ERROR & revents) {
-        logEvent(ERR, "Got invalid event. Firewall id [%d]", proxy_id);
+        logEvent(ERR, "Got invalid event. Firewall id [%d]\n", proxy_id);
         return;
     }
 
-    Connection * conn = *v_conn.begin();
-    char data[min_buf_size];
-    int len = sizeof(data) - 1;
+    DBFWConfig * conf = DBFWConfig::getInstance();
+    Connection* conn = NULL;
+    if (conf->server_running == false)
+        closeConnection();
 
+    int sfd = _socketAccept(watcher.fd);
+    if (sfd == -1)
+        return;
+
+    int cfd = _clientSocket(backend_ip.empty() ? backend_name : backend_ip, backend_port);
+    if (cfd == -1)
+    {
+        socketClose(sfd);
+        logEvent(NET_DEBUG, "Failed to connect to backend db server (%s:%d)\n", backend_name.c_str(), backend_port);
+        return;
+    }
+
+    logEvent(V_DEBUG, "client (to backend db server) connection established\n");
+
+    if (db_type == DBTypeMySQL)
+    {
+        conn = new MySQLConnection(proxy_id);
+    } // else if (db_type == DBTypePGSQL)
+    // {
+    //     conn = new PgSQLConnection(proxy_id);
+    // }
+
+    logEvent(V_DEBUG, "Database Firewall socket use: sfd=%d, cfd=%d\n", sfd, cfd);
+
+    conn->proxy_event.set<DBFW, &DBFW::proxyCB>(this);
+    conn->proxy_event_writer.set<DBFW, &DBFW::proxyCB>(this);
+    conn->proxy_event.start(sfd, ev::READ);
+
+    conn->backend_event.set<DBFW, &DBFW::backendCB>(this);
+    conn->backend_event_writer.set<DBFW, &DBFW::backendCB>(this);
+    conn->backend_event.start(cfd, ev::READ);
+
+    logEvent(V_DEBUG, "size of the connection queue: %d\n", v_conn.size());
+
+    v_conn.push_front(conn);
+
+    conn->connections = &v_conn;
+    conn->location = v_conn.begin();
+
+    // get db user ip address
+    struct sockaddr_storage ss;
+    size_t len = sizeof(struct sockaddr_storage);
+
+    getpeername(sfd,(struct sockaddr*)&ss, (socklen_t*)&len);
+    if (ss.ss_family == AF_INET) {
+        struct sockaddr_in *s = (struct sockaddr_in *)&ss;
+        conn->db_user_ip = inet_ntoa(s->sin_addr);
+    } else if (ss.ss_family == AF_INET6) {
+        struct sockaddr_in6 *s = (struct sockaddr_in6 *)&ss;
+        char ipstr[INET6_ADDRSTRLEN*2];
+        inet_ntop(AF_INET6, (void *)&s->sin6_addr, ipstr, sizeof(ipstr));
+        conn->db_user_ip = ipstr;
+    }
+}
+
+void DBFW::proxyCB(ev::io &watcher, int revents)
+{
+    logEvent(VV_DEBUG, "Proxy callback\n");
+    if (EV_ERROR & revents) {
+        logEvent(ERR, "Got invalid event. Firewall id [%d]\n", proxy_id);
+        return;
+    }
+
+    GreenSQLConfig * conf = GreenSQLConfig::getInstance();
+    if (conf->bRunning == false)
+        closeConnection();
+
+    Connection * conn = _connSearchById(watcher.fd, true);
     if (revents & EV_WRITE) {
-        if (_proxyWriteCB(watcher) == false) {
+        logEvent(V_DEBUG, "Proxy callback event: WRITE\n");
+        if (_proxyWriteCB(watcher, conn) == false) {
             conn->close();
             delete conn;
             return;
@@ -155,6 +175,11 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
     if (!(revents & EV_READ))
         return;
 
+    logEvent(V_DEBUG, "Proxy callback event: READ\n");
+
+    char data[min_buf_size];
+    int len = sizeof(data) - 1;
+
     if (_socketRead(watcher.fd, data, len) == false) {
         logEvent(NET_DEBUG, "[%d] Failed to read socket, closing socket\n", watcher.fd);
         conn->close();
@@ -162,9 +187,8 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
         return;
     }
 
-    logEvent(NET_DEBUG, "[%d] proxy socket read %d bytes\n", watcher.fd, len);
-    if ( len > 0 )
-    {
+    logEvent(V_DEBUG, "[%d] proxy socket read %d bytes\n", watcher.fd, len);
+    if ( len > 0 ) {
         data[len] = '\0';
         //printf("received data\n");
         conn->request_in.append(data,len);
@@ -176,15 +200,13 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
         }
     }
 }
-bool DBFW::_proxyWriteCB(ev::io &watcher)
+bool DBFW::_proxyWriteCB(ev::io &watcher, Connection * conn)
 {
-    Connection * conn = *v_conn.begin();
-
     int len = conn->response_out.size();
-    logEvent(NET_DEBUG, "[%d] proxy socket write %d bytes\n", watcher.fd, len);
+    logEvent(V_DEBUG, "[%d] proxy socket %d write %d byte(s)\n", proxy_id, watcher.fd, len);
     if (len == 0) {
         // we can clear the WRITE event flag
-        // disable_event_writer(conn,true);
+        _disableEventWriter(conn,true);
         // clear_init_event(conn,fd,EV_READ | EV_PERSIST,wrap_Proxy,(void *)conn);
         return true;
     }
@@ -192,37 +214,44 @@ bool DBFW::_proxyWriteCB(ev::io &watcher)
     const unsigned char * data = conn->response_out.raw();
 
     if (_socketWrite(watcher.fd, (const char*) data, len) == true) {
-        logEvent(NET_DEBUG, "Send data to client, size: %d\n",len);
+        logEvent(V_DEBUG, "Send data to client, size: %d\n",len);
         conn->response_out.chop_back(len);
     } else {
-        logEvent(NET_DEBUG, "[%d] Failed to send, closing socket\n", watcher.fd);
+        logEvent(NET_DEBUG, "[%d] Failed to send, closing socket %d\n", proxy_id, watcher.fd);
         // no need to close socket object here
         // it will be done in the caller function
         return false;
     }
-    // if (conn->response_out.size() == 0 ) {
-    //     //we can clear the WRITE event flag
-    //     disable_event_writer(conn,true);
-    //     //clear_init_event(conn,fd,EV_READ|EV_PERSIST,wrap_Proxy,(void *)conn);
-    // } else // if (conn->response_out.size() > 0 )
-    // {
-    //     // we need to enable WRITE event flag
-    // enable_event_writer(conn,true);
-    //     //clear_init_event(conn,fd,EV_READ|EV_WRITE|EV_PERSIST,wrap_Proxy,(void *)conn);
-    // }
+    if (conn->response_out.size() == 0 ) {
+        // we can clear the WRITE event flag
+        _disableEventWriter(conn,true);
+        // clear_init_event(conn,fd,EV_READ|EV_PERSIST,wrap_Proxy,(void *)conn);
+    } else { // conn->response_out.size() > 0
+        // we need to enable WRITE event flag
+        _enableEventWriter(conn,true);
+        // clear_init_event(conn,fd,EV_READ|EV_WRITE|EV_PERSIST,wrap_Proxy,(void *)conn);
+    }
     return true;
 }
 
 void DBFW::backendCB(ev::io &watcher, int revents)
 {
-    //we are real server client.
-    Connection * conn = *v_conn.begin();
-    char data[min_buf_size];
-    int len = sizeof(data)-1;
+    logEvent(VV_DEBUG, "Backend callback");
+    if (EV_ERROR & revents) {
+        logEvent(ERR, "Got invalid event. Firewall id [%d]\n", proxy_id);
+        return;
+    }
+
+    GreenSQLConfig * conf = GreenSQLConfig::getInstance();
+    if (conf->bRunning == false)
+        closeConnection();
+
+    Connection * conn = _connSearchById(watcher.fd, false);
 
     // check if we can write to this socket
     if ( revents & EV_WRITE ) {
-        if ( _backendWriteCB(watcher) == false ) {
+        logEvent(V_DEBUG, "Backend callback event: WRITE\n");
+        if ( _backendWriteCB(watcher, conn) == false ) {
             // failed to write, close this socket
             conn->close();
             delete conn;
@@ -232,7 +261,12 @@ void DBFW::backendCB(ev::io &watcher, int revents)
 
     if (!(revents & EV_READ))
         return;
+
+    logEvent(V_DEBUG, "Backend callback event: READ\n");
     
+    char data[min_buf_size];
+    int len = sizeof(data)-1;
+
     if (_socketRead(watcher.fd, data, len) == false) {
         conn->close();
         delete conn;
@@ -253,15 +287,14 @@ void DBFW::backendCB(ev::io &watcher, int revents)
     return;
 }
 
-bool DBFW::_backendWriteCB(ev::io &watcher)
+bool DBFW::_backendWriteCB(ev::io &watcher, Connection * conn)
 {
-    Connection * conn = *v_conn.begin();
     int len = conn->request_out.size();
 
     if (len == 0) {
         logEvent(NET_DEBUG, "[%d] backend socket write %d bytes\n", watcher.fd, len);
-        // disable_event_writer(conn,false);            
-        //clear_init_event(conn,fd,EV_READ | EV_PERSIST,wrap_Backend,(void *)conn,false);
+        _disableEventWriter(conn,false);            
+        // clear_init_event(conn,fd,EV_READ | EV_PERSIST,wrap_Backend,(void *)conn,false);
         return true;
     }
 
@@ -272,23 +305,23 @@ bool DBFW::_backendWriteCB(ev::io &watcher)
         conn->request_out.chop_back(len);
     } else {
         if(conn->first_response) {
-            // enable_event_writer(conn,false);
+            _enableEventWriter(conn,false);
             return true;
         }
         logEvent(NET_DEBUG, "[%d] Failed to send data to client, closing socket\n", watcher.fd);
         // no need to close connection here
         return false;
     }
-    // if (conn->request_out.size() == 0) {
-    //     //we can clear the WRITE event flag
-    //     disable_event_writer(conn,false);
-    //     //clear_init_event(conn,fd,EV_READ | EV_PERSIST,wrap_Backend,(void *)conn,false);
-    // } else //if (conn->request_out.size() > 0)
-    // {
-    //     // we need to enable WRITE event flag
-    //     enable_event_writer(conn,false);
-    //     //clear_init_event(conn,fd,EV_READ | EV_WRITE | EV_PERSIST,wrap_Backend,(void *)conn,false);
-    // }
+    if (conn->request_out.size() == 0) {
+        // we can clear the WRITE event flag
+        _disableEventWriter(conn,false);
+        // clear_init_event(conn,fd,EV_READ | EV_PERSIST,wrap_Backend,(void *)conn,false);
+    } else { // conn->request_out.size() > 0
+        // we need to enable WRITE event flag
+        _enableEventWriter(conn,false);
+        // clear_init_event(conn,fd,EV_READ | EV_WRITE | EV_PERSIST,wrap_Backend,(void *)conn,false);
+    }
+
     return true;
 }
 
@@ -406,7 +439,7 @@ int DBFW::_socketAccept(int serverfd)
     return sfd;
 }
 
-bool _proxyValidateClientRequest(Connection * conn)
+bool DBFW::_proxyValidateClientRequest(Connection * conn)
 {
     // std::string request = "";
     // bool hasResponse = false;
@@ -439,14 +472,15 @@ bool _proxyValidateClientRequest(Connection * conn)
     // if (len <= 0)
     //     return true;
 
-    // //push request
+    //push request
     // conn->request_out.append(request.c_str(), (int)request.size());
+    conn->request_out.append((const char *) conn->request_in.raw(),
+        (int) conn->request_in.size());
 
-    // return _backendWriteCB(conn->backend_event.ev_fd, conn);
-    return true;
+    return _backendWriteCB(conn->backend_event, conn);
 }
 
-bool _proxyValidateServerResponse(Connection * conn)
+bool DBFW::_proxyValidateServerResponse(Connection * conn)
 {
     // std::string response;
     // response.reserve(min_buf_size);
@@ -458,10 +492,9 @@ bool _proxyValidateServerResponse(Connection * conn)
     // {
     //     return true;
     // }
-    // conn->response_out.append(response.c_str(), (int)response.size());
-    // // if an error occurred while sending data, this socket will be closed.
-    // return _proxyWriteCB( conn->proxy_event.ev_fd, conn);
-    return true;
+    conn->response_out.append((const char *) conn->response_in.raw(), (int)conn->response_in.size());
+    // if an error occurred while sending data, this socket will be closed.
+    return _proxyWriteCB(conn->proxy_event, conn);
 }
 
 bool _socketRead(int fd, char * data, int & size)
@@ -492,15 +525,32 @@ bool _socketWrite(int fd, const char* data, int & size)
     if ((size = send(fd, data, size, 0))  <= 0)
     {
         logEvent(NET_DEBUG, "[%d] Socket write error\n", fd);
-        // if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
-        //    size = 0;
-        //    return true;
-        // }
         return false;
     }
 
-    return true;
-  
+    return true;  
+}
+
+void _disableEventWriter(Connection * conn, bool proxy)
+{
+    ev::io *writer = proxy ? &conn->proxy_event_writer : &conn->backend_event_writer;
+    bool del_event = writer->fd != 0 && writer->fd != -1;
+    
+    if (del_event) {
+        writer->stop();
+        logEvent(NET_DEBUG, "No data clear write event, fd: %d\n", writer->fd);
+    }
+}
+
+void _enableEventWriter(Connection * conn, bool proxy)
+{
+    ev::io *writer = proxy ? &conn->proxy_event_writer : &conn->backend_event_writer;
+    bool add_event = writer->fd != 0 && writer->fd != -1;
+
+    if (add_event) {
+        writer->start();
+        logEvent(NET_DEBUG, "Try again add write event, fd: %d\n", writer->fd);
+    }
 }
 
 int DBFW::socketClose(int socketfd)
@@ -508,4 +558,28 @@ int DBFW::socketClose(int socketfd)
     close(socketfd);
 
     return 0;
+}
+
+Connection * DBFW::_connSearchById(int fd, bool is_server)
+{
+    Connection * ret_val = NULL;
+
+    std::list<Connection*>::iterator iter = v_conn.begin();
+    while(iter != v_conn.end()) {
+        ret_val = *iter;
+        if(is_server == true) {
+            if (ret_val->proxy_event.fd == fd)
+                break;
+            else
+                ret_val = NULL;
+        } else {
+            if (ret_val->backend_event.fd == fd)
+                break;
+            else
+                ret_val = NULL;
+        }
+        ++iter;
+    }
+
+    return ret_val;
 }

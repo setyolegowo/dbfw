@@ -24,13 +24,12 @@ class DBFW {
         bool proxyInit(int /*_proxy_id*/, std::string& /*_proxy_ip*/, int /*_proxy_port*/,
             std::string& /*_backend_name*/, std::string& /*_backend_ip*/,
             int /*_backend_port*/, std::string& /*_db_type*/);
-        void proxyCB(ev::io &watcher, int revents);
-        void backendCB(ev::io &watcher, int revents);
+        void proxyCB(ev::io& /*watcher*/, int /*revents*/);
+        void backendCB(ev::io& /*watcher*/, int /*revents*/);
 
         bool closeConnection();
         static int socketClose(int /*socketfd*/);
-        void ioAccept(ev::io &watcher, int revents);
-        // void serverCB(int fd, short which, void * arg, Connection *, int, int);
+        void ioAccept(ev::io& /*watcher*/, int /*revents*/);
 
         ev::io      io;
         std::list<Connection*> v_conn;
@@ -44,8 +43,13 @@ class DBFW {
         DBProxyType db_type;
         
     private:
-        bool _proxyWriteCB(ev::io &watcher);
-        bool _backendWriteCB(ev::io &watcher);
+        Connection * _connSearchById(int /*fd*/, bool /*is_server*/);
+        void _closeServer();
+        // bool _serverInitialized();
+        bool _proxyWriteCB(ev::io& /*watcher*/, Connection* /*conn*/);
+        bool _backendWriteCB(ev::io& /*watcher*/, Connection* /*conn*/);
+        bool _proxyValidateClientRequest(Connection * conn);
+        bool _proxyValidateServerResponse(Connection * conn);
 
         //socket
         int _serverSocket(std::string& /*ip*/, int /*port*/);

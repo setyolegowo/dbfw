@@ -11,7 +11,7 @@
 
 #include <string>
 
-enum ErrorType { CRIT, ERR, INFO, SQL_DEBUG, DEBUG, STORAGE, NET_DEBUG };
+enum ErrorType { CRIT = -1, ERR = 0, INFO = 1, SQL_DEBUG = 2, NET_DEBUG = 3, DEBUG = 4, STORAGE = 5, V_DEBUG = 6, VV_DEBUG = 7 };
 
 bool _logInit  ();
 bool logInit   (std::string & file, int level);

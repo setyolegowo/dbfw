@@ -155,10 +155,27 @@ bool DBFWConfig::parse_log_setting(std::string & key, std::string & value)
 
 bool DBFWConfig::loadDb()
 {
+    // if(sDbType == DB_MYSQL) {
+    //   if (! db_init("mysql")) {
+    //     return false;
+    //   }
+    // }
+    // else if(sDbType == DB_PGSQL) {
+    //   if (! db_init("pgsql")) {
+    //     return false;
+    //   }
+    // }
+
+    // if (db_load(sDbHost.c_str(),sDbUser.c_str(),sDbPass.c_str(),sDbName.c_str(),iDbPort) == 0)
+    // {
+    //     logevent(STORAGE, "Failed to connect to backend db, error: %s\n", db_error());
+    //     return false;
+    // }
     return true;
 }
 
 bool DBFWConfig::closeDb()
 {
+    // db_close();
     return true;
 }

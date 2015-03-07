@@ -75,10 +75,11 @@ int main (int argc, char** argv)
         exit(0);
     }
 
-    // loop.run(0);
+    loop.run(0);
 
     /* =================== AFTER RUN =================== */
 
+    logEvent(DEBUG, "Closing application\n");
     proxyMapClose();
     logClose();
     DBFWConfig::free();

@@ -36,9 +36,9 @@ bool logInit (std::string & file, int level)
 
     FILE * fp = fopen(file.c_str(), "a+");
 
-    if (fp == NULL) {
+    if (fp == NULL)
         return false;
-    }
+    
     log_file = fp;
 
     return true;
@@ -79,14 +79,16 @@ void logEvent (ErrorType type, const char * fmt, ...)
         case INFO:
             error = "INFO      ";
             break;
-        case DEBUG:
-            error = "DEBUG     ";
+        case SQL_DEBUG:
+            error = "SQL_DEBUG ";
             break;
         case NET_DEBUG:
             error = "NET_DEBUG ";
             break;
-        case SQL_DEBUG:
-            error = "SQL_DEBUG ";
+        case VV_DEBUG:
+        case V_DEBUG:
+        case DEBUG:
+            error = "DEBUG     ";
             break;
         case STORAGE:
             error = "STORAGE   ";
@@ -120,7 +122,7 @@ void logHex (ErrorType type, const unsigned char * data, int size)
     tval = time(NULL);
     now = localtime(&tval);
 
-    switch (type) {
+    switch(type) {
         case CRIT:
             error = "CRIT      ";
             break;
@@ -130,14 +132,16 @@ void logHex (ErrorType type, const unsigned char * data, int size)
         case INFO:
             error = "INFO      ";
             break;
-        case DEBUG:
-            error = "DEBUG     ";
+        case SQL_DEBUG:
+            error = "SQL_DEBUG ";
             break;
         case NET_DEBUG:
             error = "NET_DEBUG ";
             break;
-        case SQL_DEBUG:
-            error = "SQL_DEBUG ";
+        case VV_DEBUG:
+        case V_DEBUG:
+        case DEBUG:
+            error = "DEBUG     ";
             break;
         case STORAGE:
             error = "STORAGE   ";

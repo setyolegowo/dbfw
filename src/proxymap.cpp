@@ -56,9 +56,9 @@ bool proxyMapReload()
     std::string section = "";
     line.reserve(1024);
 
-    logEvent(DEBUG, "Loading proxy configuration file: %s\n", cfg_file.c_str());
+    logEvent(VV_DEBUG, "Loading proxy configuration file: %s\n", cfg_file.c_str());
     if (!file.is_open()) {
-        logEvent(CRIT, "Failed to load configuration file: %s", cfg_file.c_str());
+        logEvent(CRIT, "Failed to load configuration file: %s\n", cfg_file.c_str());
         return false;
     }
 
@@ -77,7 +77,7 @@ bool proxyMapReload()
             size_t end_section = line.find(']');
             if (end_section == 1 || end_section == std::string::npos) {
                 //check if we found end of section
-                logEvent(DEBUG, "Failed to parse following config line: %s", line.c_str());
+                logEvent(DEBUG, "Failed to parse following config line: %s\n", line.c_str());
                 return false;
             }
             section = line.substr(1, end_section-1);
@@ -88,7 +88,7 @@ bool proxyMapReload()
 
         if (ParseConfLine(line, key, value) == false)
         {
-            logEvent(CRIT, "Failed to parse following configuration line: %s", line.c_str());
+            logEvent(CRIT, "Failed to parse following configuration line: %s\n", line.c_str());
             return false;
         }
         str_lowercase(key);
@@ -103,12 +103,12 @@ bool proxyMapReload()
                         ret = cls->proxyInit(proxy_id, proxy_ip, proxy_port,
                             name, backend_ip, backend_port, db_type);
                         if (ret == false) {
-                            logEvent(ERR, "Failed initialize firewall id [%d]",
+                            logEvent(ERR, "Failed initialize firewall id [%d]\n",
                                 proxy_id);
                             cls->closeConnection();
                             delete cls;
                         } else {
-                            logEvent(DEBUG, "Firewall id [%d] initialization successed",
+                            logEvent(VV_DEBUG, "Firewall id [%d] initialization successed\n",
                                 proxy_id);
                             proxies[proxy_id] = cls;
                         }
@@ -128,7 +128,25 @@ bool proxyMapReload()
             __proxyMapKeyValue(proxy_id, name, db_type, backend_ip, backend_port,
                 proxy_ip, proxy_port, key, value);
         } else
-            logEvent(DEBUG, "No section for this key-value configuration: \"%s\"", line.c_str());
+            logEvent(VV_DEBUG, "No section for this key-value configuration: \"%s\"\n", line.c_str());
+    }
+
+    // last configuration saving
+    itr = proxies.find(proxy_id);
+    if (itr == proxies.end()) {
+        cls = new DBFW();
+        ret = cls->proxyInit(proxy_id, proxy_ip, proxy_port,
+            name, backend_ip, backend_port, db_type);
+        if (ret == false) {
+            logEvent(ERR, "Failed initialize firewall id [%d]\n",
+                proxy_id);
+            cls->closeConnection();
+            delete cls;
+        } else {
+            logEvent(VV_DEBUG, "Firewall id [%d] initialization successed\n",
+                proxy_id);
+            proxies[proxy_id] = cls;
+        }
     }
 
     return true;
@@ -144,6 +162,8 @@ bool proxyMapClose()
         iter = proxies.begin();
         cls = iter->second;
         cls->closeConnection();
+        logEvent(V_DEBUG, "Firewall id [%d] closeConnection successed\n",
+            iter->first);
         delete cls;
         proxies.erase(iter);
     }
@@ -169,7 +189,7 @@ bool __proxyMapKeyValue(int & proxy_id, std::string & name, std::string & db_typ
     else if(key == "proxy_ip")     proxy_ip = value;
     else if(key == "proxy_port")   proxy_port = atoi(value.c_str());
     else
-        logEvent(DEBUG, "[Parse ENGINE] No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
+        logEvent(VV_DEBUG, "[Parse ENGINE] No section for this key-value configuration: \"%s=%s\"\n", key.c_str(), value.c_str());
 
     return true;
 }
