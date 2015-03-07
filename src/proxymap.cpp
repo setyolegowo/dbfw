@@ -162,7 +162,7 @@ bool proxyMapClose()
         iter = proxies.begin();
         cls = iter->second;
         cls->closeConnection();
-        logEvent(V_DEBUG, "Firewall id [%d] closeConnection successed\n",
+        logEvent(V_DEBUG, "Firewall id [%d] close connection successed\n",
             iter->first);
         delete cls;
         proxies.erase(iter);

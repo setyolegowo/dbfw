@@ -18,7 +18,7 @@
 
 Connection::Connection(int proxy_id)
 {
-	logEvent(NET_DEBUG, "connection init()\n");
+	logEvent(NET_DEBUG, "[%d] Connection init\n", proxy_id);
 
     iProxyId       = proxy_id;
     first_request  = true;
@@ -34,8 +34,8 @@ Connection::Connection(int proxy_id)
 
 bool Connection::close()
 {
-    logEvent(NET_DEBUG, "connection close(), proxy socket %d, backend socket %d\n", 
-    	proxy_event.fd, backend_event.fd);
+    logEvent(NET_DEBUG, "[%d] Connection close(), proxy socket %d, backend socket %d\n", 
+    	iProxyId, proxy_event.fd, backend_event.fd);
     
     DBFW::socketClose(proxy_event.fd);
     DBFW::socketClose(backend_event.fd);

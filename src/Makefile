@@ -13,7 +13,6 @@ dbfw: $(OBJS)
 # $(CXX) $(CFLAGS) -c mysql/mysql_con.cpp -o mysql/mysql_con.o
 
 clean:
-	rm -rf dbfw *.o
-# rm -rf dbfw *.o mysql/*.o
+	rm -rf dbfw *.o mysql/*.o
 # cd parser; make clean
 # cd lib; make clean

@@ -21,7 +21,7 @@ class DBFW {
         DBFW();
         virtual ~DBFW();
 
-        static void signal_cb(ev::sig &signal, int revents) { signal.loop.break_loop(); }
+        static void signal_cb(ev::sig &signal, int revents);
 
         bool proxyInit(int /*_proxy_id*/, std::string& /*_proxy_ip*/, int /*_proxy_port*/,
             std::string& /*_backend_name*/, std::string& /*_backend_ip*/,

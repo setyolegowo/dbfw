@@ -27,6 +27,14 @@ static void _enableEventWriter(Connection * conn, bool proxy);
 static bool _socketRead(int fd, char * data, int & size);
 static bool _socketWrite(int fd, const char* data, int & size);
 
+void DBFW::signal_cb(ev::sig &signal, int revents)
+{
+    logEvent(CRIT, "Signal callback fired from somewhere\n");
+    DBFWConfig * cfg = DBFWConfig::getInstance();
+    cfg->server_running = false;
+    signal.loop.break_loop();
+}
+
 DBFW::DBFW()
 {}
 
@@ -90,6 +98,8 @@ bool DBFW::proxyInit(int _proxy_id, std::string& _proxy_ip, int _proxy_port,
     io.start(sfd, ev::READ|ev::WRITE);
 
     sio.set<&DBFW::signal_cb>();
+    sio.start(SIGQUIT);
+    sio.start(SIGHUP);
     sio.start(SIGINT);
     sio.start(SIGTERM);
 
@@ -99,7 +109,7 @@ bool DBFW::proxyInit(int _proxy_id, std::string& _proxy_ip, int _proxy_port,
 void DBFW::ioAccept(ev::io &watcher, int revents)
 {
     if (EV_ERROR & revents) {
-        logEvent(ERR, "Got invalid event. Firewall id [%d]\n", proxy_id);
+        logEvent(ERR, "[%d] IO accept. Got invalid event\n", proxy_id);
         return;
     }
 
@@ -119,7 +129,7 @@ void DBFW::ioAccept(ev::io &watcher, int revents)
         return;
     }
 
-    logEvent(V_DEBUG, "client (to backend db server) connection established\n");
+    logEvent(V_DEBUG, "[%d] Client to backend db server connection established\n", proxy_id);
 
     if (db_type == DBTypeMySQL)
     {
@@ -129,7 +139,7 @@ void DBFW::ioAccept(ev::io &watcher, int revents)
     //     conn = new PgSQLConnection(proxy_id);
     // }
 
-    logEvent(V_DEBUG, "Database Firewall socket use: sfd=%d, cfd=%d\n", sfd, cfd);
+    logEvent(V_DEBUG, "[%d] Database Firewall socket use: sfd=%d, cfd=%d\n", proxy_id, sfd, cfd);
 
     conn->proxy_event.set<DBFW, &DBFW::proxyCB>(this);
     conn->proxy_event_writer.set<DBFW, &DBFW::proxyCB>(this);
@@ -139,7 +149,7 @@ void DBFW::ioAccept(ev::io &watcher, int revents)
     conn->backend_event_writer.set<DBFW, &DBFW::backendCB>(this);
     conn->backend_event.start(cfd, ev::READ);
 
-    logEvent(V_DEBUG, "size of the connection queue: %d\n", v_conn.size());
+    logEvent(V_DEBUG, "[%d] Size of current connection queue: %d\n", proxy_id, v_conn.size());
 
     v_conn.push_front(conn);
 
@@ -164,9 +174,8 @@ void DBFW::ioAccept(ev::io &watcher, int revents)
 
 void DBFW::proxyCB(ev::io &watcher, int revents)
 {
-    logEvent(VV_DEBUG, "Proxy callback\n");
     if (EV_ERROR & revents) {
-        logEvent(ERR, "Got invalid event. Firewall id [%d]\n", proxy_id);
+        logEvent(ERR, "[%d] Proxy callback. Got invalid event\n", proxy_id);
         return;
     }
 
@@ -176,7 +185,7 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
 
     Connection * conn = _connSearchById(watcher.fd, true);
     if (revents & EV_WRITE) {
-        logEvent(V_DEBUG, "Proxy callback event: WRITE\n");
+        logEvent(V_DEBUG, "[%d] Proxy callback event: WRITE\n", proxy_id);
         if (_proxyWriteCB(watcher, conn) == false) {
             conn->close();
             delete conn;
@@ -187,19 +196,19 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
     if (!(revents & EV_READ))
         return;
 
-    logEvent(V_DEBUG, "Proxy callback event: READ\n");
+    logEvent(V_DEBUG, "[%d] Proxy callback event: READ\n", proxy_id);
 
     char data[min_buf_size];
     int len = sizeof(data) - 1;
 
     if (_socketRead(watcher.fd, data, len) == false) {
-        logEvent(NET_DEBUG, "[%d] Failed to read socket, closing socket\n", watcher.fd);
+        logEvent(NET_DEBUG, "[%d] Failed to read socket, closing socket %d\n", proxy_id, watcher.fd);
         conn->close();
         delete conn;
         return;
     }
 
-    logEvent(V_DEBUG, "[%d] proxy socket read %d bytes\n", watcher.fd, len);
+    logEvent(V_DEBUG, "[%d] Proxy socket %d read %d bytes\n", proxy_id, watcher.fd, len);
     if ( len > 0 ) {
         data[len] = '\0';
         //printf("received data\n");
@@ -210,6 +219,8 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
             conn->close();
             delete conn;
         }
+
+        conn->request_in.chop_back(len);
     }
 }
 bool DBFW::_proxyWriteCB(ev::io &watcher, Connection * conn)
@@ -226,10 +237,10 @@ bool DBFW::_proxyWriteCB(ev::io &watcher, Connection * conn)
     const unsigned char * data = conn->response_out.raw();
 
     if (_socketWrite(watcher.fd, (const char*) data, len) == true) {
-        logEvent(V_DEBUG, "Send data to client, size: %d\n",len);
+        logEvent(V_DEBUG, "[%d] Sending data to client by socket %d, size=%d\n", proxy_id, watcher.fd, len);
         conn->response_out.chop_back(len);
     } else {
-        logEvent(NET_DEBUG, "[%d] Failed to send, closing socket %d\n", proxy_id, watcher.fd);
+        logEvent(NET_DEBUG, "[%d] Failed send data to client by socket %d, size=%d\n", proxy_id, watcher.fd, len);
         // no need to close socket object here
         // it will be done in the caller function
         return false;
@@ -248,9 +259,8 @@ bool DBFW::_proxyWriteCB(ev::io &watcher, Connection * conn)
 
 void DBFW::backendCB(ev::io &watcher, int revents)
 {
-    logEvent(VV_DEBUG, "Backend callback\n");
     if (EV_ERROR & revents) {
-        logEvent(ERR, "Got invalid event. Firewall id [%d]\n", proxy_id);
+        logEvent(ERR, "[%d] Backend callback. Got invalid event\n", proxy_id);
         return;
     }
 
@@ -294,6 +304,7 @@ void DBFW::backendCB(ev::io &watcher, int revents)
             conn->close();
             delete conn;
         }
+        conn->response_in.chop_back(len);
     }
 
     return;
@@ -304,7 +315,7 @@ bool DBFW::_backendWriteCB(ev::io &watcher, Connection * conn)
     int len = conn->request_out.size();
 
     if (len == 0) {
-        logEvent(NET_DEBUG, "[%d] backend socket write %d bytes\n", watcher.fd, len);
+        logEvent(NET_DEBUG, "[%d] backend socket %d write %d bytes\n", proxy_id, watcher.fd, len);
         _disableEventWriter(conn,false);            
         // clear_init_event(conn,fd,EV_READ | EV_PERSIST,wrap_Backend,(void *)conn,false);
         return true;
@@ -313,14 +324,14 @@ bool DBFW::_backendWriteCB(ev::io &watcher, Connection * conn)
     const unsigned char * data = conn->request_out.raw();
 
     if (_socketWrite(watcher.fd, (const char *)data, len) == true) {
-        logEvent(NET_DEBUG, "sending data to backend server\n");
+        logEvent(NET_DEBUG, "[%d] Sending data to backend server by socket %d, size=%d\n", proxy_id, watcher.fd, len);
         conn->request_out.chop_back(len);
     } else {
         if(conn->first_response) {
             _enableEventWriter(conn,false);
             return true;
         }
-        logEvent(NET_DEBUG, "[%d] Failed to send data to client, closing socket\n", watcher.fd);
+        logEvent(NET_DEBUG, "[%d] Failed to send data to backend server by socket %d, size=%d\n", proxy_id, watcher.fd, len);
         // no need to close connection here
         return false;
     }
@@ -341,7 +352,7 @@ int DBFW::_newSocket() {
     int sfd;
 
     if ((sfd = (int)socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        logEvent(NET_DEBUG, "Failed to create socket\n");
+        logEvent(NET_DEBUG, "[%d] Failed to create socket\n", proxy_id);
         return -1;
     }
 
@@ -349,7 +360,7 @@ int DBFW::_newSocket() {
     if ((flags = fcntl(sfd, F_GETFL, 0)) < 0 ||
          fcntl(sfd, F_SETFL, flags | O_NONBLOCK) < 0)
     {
-        logEvent(NET_DEBUG, "[%d] Failed to swith socket to non-blocking mode\n", sfd);
+        logEvent(NET_DEBUG, "[%d] Failed to swith socket %d to non-blocking mode\n", proxy_id, sfd);
         socketClose(sfd);
         return -1;
     }
@@ -387,7 +398,7 @@ int DBFW::_serverSocket(std::string & ip, int port)
     }
     
     if (listen(sfd, 1024) < 0) {
-        logEvent(NET_DEBUG, "Failed to switch socket to listener mode\n");
+        logEvent(NET_DEBUG, "Failed to switch socket %d to listener mode\n", sfd);
         socketClose(sfd);
         return -1;
     }
@@ -462,7 +473,7 @@ int DBFW::_socketAccept(int serverfd)
   
     if ((flags = fcntl(sfd, F_GETFL, 0)) < 0 ||
         fcntl(sfd, F_SETFL, flags | O_NONBLOCK) < 0) {
-        logEvent(NET_DEBUG, "[%d] Failed to swith socket to non-blocking mode\n", sfd);
+        logEvent(NET_DEBUG, "[%d] Failed to swith socket %d to non-blocking mode\n", proxy_id, sfd);
         socketClose(sfd);
         return -1;
     }
@@ -533,7 +544,7 @@ bool _socketRead(int fd, char * data, int & size)
     if ((size = recv(fd, data, size, 0)) < 0)
     {
         size = 0;
-        logEvent(NET_DEBUG, "[%d] Socket read error %d\n", fd, errno);
+        logEvent(NET_DEBUG, "Socket %d read error, errno=%d\n", fd, errno);
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
            return true;
         }
@@ -541,16 +552,21 @@ bool _socketRead(int fd, char * data, int & size)
     }
     if (size == 0)
     {
-       logEvent(NET_DEBUG, "[%d] Socket read error\n", fd);
+       logEvent(NET_DEBUG, "Socket %d read error. Size receive 0 byte.\n", fd);
        return false;
     }
+    // logEvent(NET_DEBUG, "Socket %d read %d byte(s)\n", fd, size);
+    // logEvent(VV_DEBUG, "VALUE:\n");
+    // logHex(VV_DEBUG, (const unsigned char *) data, size);
                    
     return true; 
 }
 
 bool _socketWrite(int fd, const char* data, int & size)
 {
-    logEvent(NET_DEBUG, "Socket_write\n");
+    // logEvent(NET_DEBUG, "Socket %d write %d byte(s)\n", fd, size);
+    // logEvent(VV_DEBUG, "VALUE:\n");
+    // logHex(VV_DEBUG, (const unsigned char *) data, size);
     if ((size = send(fd, data, size, 0))  <= 0)
     {
         logEvent(NET_DEBUG, "[%d] Socket write error %d\n", fd, errno);
