@@ -10,15 +10,16 @@
 #include "connection.hpp"
 #include "mysql/mysql_con.hpp"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <netinet/in.h>
 
 static const int min_buf_size = 10240;
 static void _disableEventWriter(Connection * conn, bool proxy);
@@ -30,10 +31,15 @@ DBFW::DBFW()
 {}
 
 DBFW::~DBFW()
-{}
+{
+    io.stop();
+    socketClose(io.fd);
+    logEvent(VV_DEBUG, "[%d] Database firewall destructed\n", proxy_id);
+}
 
 bool DBFW::closeConnection()
 {
+    logEvent(NET_DEBUG, "[%d] Closing connection and server\n", proxy_id);
     Connection * conn;
     while ( v_conn.size() != 0)
     {
@@ -45,11 +51,14 @@ bool DBFW::closeConnection()
     v_conn.clear();
 
     _closeServer();
+    logEvent(NET_DEBUG, "[%d] Connection and server closed\n", proxy_id);
     return true;
 }
 
 void DBFW::_closeServer()
 {
+    socketClose(io.fd);
+    io.stop();
     return;
 }
 
@@ -80,6 +89,10 @@ bool DBFW::proxyInit(int _proxy_id, std::string& _proxy_ip, int _proxy_port,
     io.set<DBFW, &DBFW::ioAccept>(this);
     io.start(sfd, ev::READ|ev::WRITE);
 
+    sio.set<&DBFW::signal_cb>();
+    sio.start(SIGINT);
+    sio.start(SIGTERM);
+
     return true;
 }
 
@@ -103,7 +116,6 @@ void DBFW::ioAccept(ev::io &watcher, int revents)
     if (cfd == -1)
     {
         socketClose(sfd);
-        logEvent(NET_DEBUG, "Failed to connect to backend db server (%s:%d)\n", backend_name.c_str(), backend_port);
         return;
     }
 
@@ -158,8 +170,8 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
         return;
     }
 
-    GreenSQLConfig * conf = GreenSQLConfig::getInstance();
-    if (conf->bRunning == false)
+    DBFWConfig * conf = DBFWConfig::getInstance();
+    if (conf->server_running == false)
         closeConnection();
 
     Connection * conn = _connSearchById(watcher.fd, true);
@@ -236,14 +248,14 @@ bool DBFW::_proxyWriteCB(ev::io &watcher, Connection * conn)
 
 void DBFW::backendCB(ev::io &watcher, int revents)
 {
-    logEvent(VV_DEBUG, "Backend callback");
+    logEvent(VV_DEBUG, "Backend callback\n");
     if (EV_ERROR & revents) {
         logEvent(ERR, "Got invalid event. Firewall id [%d]\n", proxy_id);
         return;
     }
 
-    GreenSQLConfig * conf = GreenSQLConfig::getInstance();
-    if (conf->bRunning == false)
+    DBFWConfig * conf = DBFWConfig::getInstance();
+    if (conf->server_running == false)
         closeConnection();
 
     Connection * conn = _connSearchById(watcher.fd, false);
@@ -389,20 +401,33 @@ int DBFW::_clientSocket(std::string & server, int port)
     struct sockaddr_in addr;
     int flags =1;
     struct linger ling = {0, 0};
+    // struct hostent *srv;
 
     if ((sfd = _newSocket()) == -1) {
         return -1;
     }
+    // srv = gethostbyname((char*) server.c_str());
+
     setsockopt(sfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
     setsockopt(sfd, SOL_SOCKET, SO_KEEPALIVE, &flags, sizeof(flags));
 
+    bzero((char *) &addr, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
+    // bcopy((char *) srv->h_addr, (char *)&addr.sin_addr.s_addr, srv->h_length);
     addr.sin_addr.s_addr = inet_addr(server.c_str());
+    addr.sin_port = htons(port);
       
-    if (connect(sfd, (struct sockaddr *) &addr, sizeof(addr)) == -1)
+    if (connect(sfd, (const sockaddr *) &addr, sizeof(addr)) < 0)
     {
-        logEvent(NET_DEBUG, "[%d] Failed to connect to backend server\n", sfd);
+        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
+            return sfd;
+        } else if (errno == EMFILE) {
+            logEvent(NET_DEBUG, "[%d] Failed to connect to backend server %d, too many open sockets\n",
+                proxy_id, sfd);
+        } else {
+            logEvent(NET_DEBUG, "[%d] Failed to connect to backend db server (%s:%d), sfd=%d\n",
+                proxy_id, server.c_str(), backend_port, sfd);
+        }
         socketClose(sfd);
         return -1;
     }
@@ -421,7 +446,13 @@ int DBFW::_socketAccept(int serverfd)
     addrlen = sizeof(addr);
 
     if ((sfd = (int)accept(serverfd, &addr, &addrlen)) == -1) {
-        logEvent(NET_DEBUG, "[%d] Failed to accept client socket\n", serverfd);
+        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
+            return sfd;
+        } else if (errno == EMFILE) {
+            logEvent(NET_DEBUG, "[%d] Failed to accept client socket %d, too many open sockets\n", proxy_id, serverfd);
+        } else {
+            logEvent(NET_DEBUG, "[%d] Failed to accept client socket %d\n", proxy_id, serverfd);
+        }
         socketClose(sfd);
         return -1;
     }
@@ -502,12 +533,10 @@ bool _socketRead(int fd, char * data, int & size)
     if ((size = recv(fd, data, size, 0)) < 0)
     {
         size = 0;
-        logEvent(NET_DEBUG, "[%d] Socket read error\n", fd);
-// #ifndef WIN32
-//         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
-//            return true;
-//         }
-// #endif
+        logEvent(NET_DEBUG, "[%d] Socket read error %d\n", fd, errno);
+        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
+           return true;
+        }
         return false;
     }
     if (size == 0)
@@ -524,7 +553,11 @@ bool _socketWrite(int fd, const char* data, int & size)
     logEvent(NET_DEBUG, "Socket_write\n");
     if ((size = send(fd, data, size, 0))  <= 0)
     {
-        logEvent(NET_DEBUG, "[%d] Socket write error\n", fd);
+        logEvent(NET_DEBUG, "[%d] Socket write error %d\n", fd, errno);
+        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
+            size = 0;
+            return true;
+        }
         return false;
     }
 

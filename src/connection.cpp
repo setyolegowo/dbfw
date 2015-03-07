@@ -34,24 +34,22 @@ Connection::Connection(int proxy_id)
 
 bool Connection::close()
 {
-    // logevent(NET_DEBUG, "connection close(), proxy socket %d, backend socket %d\n", 
-    // 	proxy_event.ev_fd, backend_event.ev_fd);
+    logEvent(NET_DEBUG, "connection close(), proxy socket %d, backend socket %d\n", 
+    	proxy_event.fd, backend_event.fd);
     
-    // DBFW::socketClose(proxy_event.ev_fd);
-    // DBFW::socketClose(backend_event.ev_fd);
+    DBFW::socketClose(proxy_event.fd);
+    DBFW::socketClose(backend_event.fd);
 
-    // if (proxy_event.ev_fd != 0 && proxy_event.ev_fd != -1 && proxy_event.ev_flags & EVLIST_INIT)
-    //     event_del(&proxy_event);
-    // if (proxy_event_writer.ev_fd != 0 && proxy_event_writer.ev_fd != -1 &&
-    //             proxy_event_writer.ev_flags & EVLIST_INIT && proxy_event_writer.ev_flags & EVLIST_INSERTED)
-    //     event_del(&proxy_event_writer);
+    if (proxy_event.fd >0)
+        proxy_event.stop();
+    if (proxy_event_writer.fd > 0)
+        proxy_event_writer.stop();
 
-    // if (backend_event.ev_fd != 0 && backend_event.ev_fd != -1 && backend_event.ev_flags & EVLIST_INIT)
-    //     event_del(&backend_event);
-    // if (backend_event_writer.ev_fd != 0 && backend_event_writer.ev_fd != -1 &&
-    //             backend_event_writer.ev_flags & EVLIST_INIT && backend_event_writer.ev_flags & EVLIST_INSERTED )
-    //     event_del(&backend_event_writer);
-    // connections->erase(location);
+    if (backend_event.fd > 0)
+        backend_event.stop();
+    if (backend_event_writer.fd > 0)
+        backend_event_writer.stop();
+    connections->erase(location);
 
     return true;
 }

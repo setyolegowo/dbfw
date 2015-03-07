@@ -79,10 +79,11 @@ int main (int argc, char** argv)
 
     /* =================== AFTER RUN =================== */
 
-    logEvent(DEBUG, "Closing application\n");
     proxyMapClose();
-    logClose();
     DBFWConfig::free();
+
+    logEvent(DEBUG, "Application closed\n\n");
+    logClose();
 
     return 0;
 }

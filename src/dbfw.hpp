@@ -21,6 +21,8 @@ class DBFW {
         DBFW();
         virtual ~DBFW();
 
+        static void signal_cb(ev::sig &signal, int revents) { signal.loop.break_loop(); }
+
         bool proxyInit(int /*_proxy_id*/, std::string& /*_proxy_ip*/, int /*_proxy_port*/,
             std::string& /*_backend_name*/, std::string& /*_backend_ip*/,
             int /*_backend_port*/, std::string& /*_db_type*/);
@@ -32,6 +34,7 @@ class DBFW {
         void ioAccept(ev::io& /*watcher*/, int /*revents*/);
 
         ev::io      io;
+        ev::sig     sio;
         std::list<Connection*> v_conn;
 
         int         proxy_id;
