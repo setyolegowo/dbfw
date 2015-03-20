@@ -22,8 +22,8 @@ class DBFWConfig {
         static void free();
         std::string conf_path;
         bool load ();
-        bool loadDb ();
-        bool closeDb ();
+        // bool loadDb ();
+        // bool closeDb ();
         bool server_running;
 
         // risk engine factors

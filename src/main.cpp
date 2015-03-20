@@ -52,10 +52,6 @@ int main (int argc, char** argv)
 
     logEvent(INFO, "Application started\n");
 
-    if (cfg->loadDb() == false) {
-        fprintf(stderr, "Failed to connect to db storage.\n");
-        return -1;
-    }
     /* DBMS RULES INIT
     if (mysql_rules_init(conf_path) == false) {
         fprintf(stderr, "Failed to load MySQL list of rules.\n");
