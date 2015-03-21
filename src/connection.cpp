@@ -11,14 +11,13 @@
 #include "log.hpp"
 #include "misc.hpp"
 #include "normalization.hpp"
-// #include "riskengine.hpp"
 // #include "alert.hpp"
-// #include "parser/parser.hpp"     // for query_risk struct
+#include "parser/parser.hpp"     // for query_risk struct
 // #include "dbmap.hpp"
 
 Connection::Connection(int proxy_id)
 {
-	logEvent(NET_DEBUG, "[%d] Connection init\n", proxy_id);
+    logEvent(NET_DEBUG, "[%d] Connection init\n", proxy_id);
 
     iProxyId       = proxy_id;
     first_request  = true;
@@ -28,14 +27,14 @@ Connection::Connection(int proxy_id)
     db_user        = "";
     db_type        = "";
     db_user_ip     = "";
-	SecondPacket   = false;
-	first_response = true;
+    SecondPacket   = false;
+    first_response = true;
 }
 
 bool Connection::close()
 {
     logEvent(NET_DEBUG, "[%d] Connection close(), proxy socket %d, backend socket %d\n", 
-    	iProxyId, proxy_event.fd, backend_event.fd);
+        iProxyId, proxy_event.fd, backend_event.fd);
     
     DBFW::socketClose(proxy_event.fd);
     DBFW::socketClose(backend_event.fd);
@@ -59,21 +58,18 @@ bool Connection::check_query(std::string & query)
     //return true;
     // DBFWConfig * conf = DBFWConfig::getInstance();
     std::string original_query = query;
-    // std::string reason = "";
+    std::string reason = "";
 
     // convert query to lower case
     str_lowercase(query);
     // perform normalization - make a pattern of the query
     normalizeQuery( (DBProxyType) dbType, query);
-    // we will make the reference out of query
-    // std::string & pattern = query;
-
     logEvent(SQL_DEBUG, "AFTER NORM   : %s\n", query.c_str());
     logEvent(VV_DEBUG, "NOTHING TODO\n");
 
     // bool ret = false;
     // bool privileged_operation = false;
-    // int risk = 0;
+    int risk = 0;
 
     // Optimization Changes
     // In case we are in automatic block of the new commands
@@ -93,11 +89,11 @@ bool Connection::check_query(std::string & query)
  //    if ( (ret = checkBlacklist(pattern, reason)) == true)
  //    {
  //         privileged_operation = true;
-	//  logEvent(SQL_DEBUG, "FORBIDEN     : %s\n", pattern.c_str());
+    //  logEvent(SQL_DEBUG, "FORBIDEN     : %s\n", pattern.c_str());
  //    }
  //    // check if we find anything interesting
- //    risk = calculateRisk(original_query, reason);
- //    logEvent(SQL_DEBUG, "RISK         : %d\n", risk);
+    risk = calculateRisk(original_query, reason);
+    logEvent(SQL_DEBUG, "RISK         : %d\n", risk);
 
  //    DBBlockStatus block_status = db->GetBlockStatus();
 
@@ -113,21 +109,21 @@ bool Connection::check_query(std::string & query)
 
  //    if (privileged_operation)
  //    {
-	// risk = conf->re_block_level+1;
+    // risk = conf->re_block_level+1;
  //        if (block_status == PRIVILEGE_BLOCK || block_status == RISK_BLOCK)
  //        {
  //            logalert(iProxyId, db_name, db_user, db_user_ip, original_query,
  //                     pattern, reason, risk, (int)BLOCKED);
  //            // block this query
  //            return false;
-	// } else if (block_status == LEARNING_MODE ||
-	// 	   block_status == LEARNING_MODE_3DAYS ||
-	// 	   block_status == LEARNING_MODE_7DAYS)
-	// {
-	//     db->AddToWhitelist(db_user, pattern);
+    // } else if (block_status == LEARNING_MODE ||
+    //     block_status == LEARNING_MODE_3DAYS ||
+    //     block_status == LEARNING_MODE_7DAYS)
+    // {
+    //     db->AddToWhitelist(db_user, pattern);
  //            logwhitelist(iProxyId, db_name, db_user, db_user_ip, original_query,
  //                         pattern, reason, risk, (int)HIGH_RISK);
-	//     return true;
+    //     return true;
  //        } else {
  //            // block_status == RISK_SIMULATION 
  //            // block_status == LEARNING_MODE
@@ -153,7 +149,7 @@ bool Connection::check_query(std::string & query)
  //        } else {
  //            logwhitelist(iProxyId, db_name, db_user, db_user_ip, original_query,
  //                     pattern, reason, risk, (int)LOW);
-	// }
+    // }
 
  //        return true;
  //    }
@@ -179,4 +175,56 @@ bool Connection::check_query(std::string & query)
  //    }
 
     return true;
+}
+
+unsigned int Connection::calculateRisk(std::string & query, std::string & reason)
+{
+    DBFWConfig * conf = DBFWConfig::getInstance();
+    unsigned int ret = 0;
+
+    struct query_risk risk;
+    query_parse(&risk, getSQLPatterns(), query.c_str());
+
+    if (conf->re_sql_comments > 0 && risk.has_comment == 1) {
+        reason += "Query has comments\n";
+        logEvent(DEBUG, "Query has comments\n");
+        ret += conf->re_sql_comments;
+    }
+    if (conf->re_s_tables > 0 && risk.has_s_table == 1) {
+        reason += "Query uses sensitive tables\n";
+        logEvent(DEBUG, "Query uses sensitive tables\n");
+        ret += conf->re_s_tables;
+    }
+    if (conf->re_multiple_queries > 0 && risk.has_separator == 1) {
+        reason += "Multiple queries found\n";
+        logEvent(DEBUG, "Multiple queries found\n");
+        ret += conf->re_multiple_queries;
+    }
+    if (conf->re_or_token > 0 && risk.has_or == 1) {
+        reason += "Query has 'or' token\n";
+        logEvent(DEBUG, "Query has 'or' token\n");
+        ret += conf->re_or_token;
+    }
+    if (conf->re_union_token > 0 && risk.has_union == 1) {
+        reason += "Query has 'union' token\n";
+        logEvent(DEBUG, "Query has 'union' token\n");
+        ret += conf->re_union_token;
+    }
+    if (conf->re_var_cmp_var > 0 && risk.has_tautology == 1) {
+        reason += "True expression detected (SQL tautology)\n";
+        logEvent(DEBUG, "True expression detected (SQL tautology)\n");
+        ret += conf->re_var_cmp_var;
+    }
+    if (conf->re_empty_password > 0 && risk.has_empty_pwd == 1) {
+        reason += "Query has empty password expression\n";
+        logEvent(DEBUG, "Query has empty password expression\n");
+        ret += conf->re_empty_password;
+    }
+    if (conf->re_bruteforce > 0 && risk.has_bruteforce_function == 1) {
+        reason += "Query has SQL fuction that can be used to bruteforce db contents\n";
+        logEvent(DEBUG, "Query has SQL fuction that can be used to bruteforce db contents\n");
+        ret += conf->re_bruteforce;
+    }
+
+    return ret;
 }

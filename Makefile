@@ -2,7 +2,7 @@ CPP=g++
 
 dbfw:
 	rm -rf dbfw src/dbfw
-	cd src; make; cp dbfw ../
+	cd src; make CPP="$(CPP)"; cp dbfw ../
 
 clean:
 	cd src; make clean

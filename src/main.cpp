@@ -13,8 +13,9 @@
 #include <ev.h>
 #include <ev++.h>
 
-#include "dbfw.hpp"
 #include "config.hpp"
+#include "dbfw.hpp"
+#include "mysql/mysql_con.hpp"
 #include "proxymap.hpp"
 
 /* ---------------------------------------------------------------- */
@@ -34,7 +35,6 @@ void killer (int);
 int main (int argc, char** argv)
 {
     DBFWConfig * cfg = DBFWConfig::getInstance();
-    std::string conf_path = "";
     if(parameterCheck(argc, argv, cfg->conf_path) < 0)
         return -1;
     
@@ -52,13 +52,13 @@ int main (int argc, char** argv)
 
     logEvent(INFO, "Application started\n");
 
-    /* DBMS RULES INIT
-    if (mysql_rules_init(conf_path) == false) {
-        fprintf(stderr, "Failed to load MySQL list of rules.\n");
+    /* DBMS RULES INIT */
+    if (mysqlPatternsInit(cfg->conf_path) == false) {
+        fprintf(stderr, "Failed to load MySQL list of patterns.\n");
         return -1;
-    }
-    if (pgsql_rules_init(conf_path) == false) {
-        fprintf(stderr, "Failed to load PGSQL list of rules.\n");
+    } /*
+    if (pgsql_patterns_init(conf_path) == false) {
+        fprintf(stderr, "Failed to load PGSQL list of patterns.\n");
         return -1;
     } END OF DBMS RULES */
 

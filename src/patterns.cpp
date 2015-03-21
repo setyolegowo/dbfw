@@ -109,10 +109,10 @@ bool SQLPatterns::Load(std::string & cfg_file)
     std::string temp;
 
     if (!file.is_open()) {
-        logEvent(CRIT, "Failed to load file with patterns - %s.\n", 
-            cfg_file.c_str());
+        logEvent(CRIT, "Failed to load patterns file: %s\n", cfg_file.c_str());
         return false;
     }
+    logEvent(VV_DEBUG, "Loading patterns file: %s\n", cfg_file.c_str());
 
     std::string line = "";
     std::string section = "";

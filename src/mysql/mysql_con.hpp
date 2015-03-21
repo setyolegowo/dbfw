@@ -5,11 +5,13 @@
 // License: GPL v2 (http://www.gnu.org/licenses/gpl.html)
 //
 
-#ifndef GREEN_SQL_MYSQL_CONNECTION_HPP
-#define GREEN_SQL_MYSQL_CONNECTION_HPP
+#ifndef DBFW_MYSQL_CONNECTION_HPP
+#define DBFW_MYSQL_CONNECTION_HPP
 
 #include "../connection.hpp"
 #include "../log.hpp"
+
+bool mysqlPatternsInit(std::string& /*path*/);
 
 enum MySQLType {
     /* client requests */

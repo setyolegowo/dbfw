@@ -13,6 +13,13 @@
 
 static SQLPatterns mysql_patterns;
 
+bool mysqlPatternsInit(std::string & path)
+{
+    std::string file = path + "mysql.conf";
+
+    return mysql_patterns.Load(file);
+}
+
 SQLPatterns * MySQLConnection::getSQLPatterns()
 {
     return & mysql_patterns;
@@ -39,7 +46,6 @@ bool MySQLConnection::checkBlacklist(std::string & query, std::string & reason)
 {
     // TODO Use XACML
 
-    //GreenSQLConfig * conf = GreenSQLConfig::getInstance();
     // bool ret = false;
     // bool bad = false;
     // if (db->CanAlter() == false)
@@ -233,7 +239,6 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
             db_name.clear();
             db_name.append((const char*) data + temp, end - temp);
             logEvent(SQL_DEBUG, "DATABASE: %s\n", db_name.c_str());
-
         }
 
         first_request = false;

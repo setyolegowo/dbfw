@@ -39,7 +39,7 @@ class Connection
         ev::io backend_event;
         ev::io backend_event_writer;
 
-        int iProxyId;    // the simplest method to transfer proxy id
+        int iProxyId;    // the simplest atribute to transfer proxy id
         std::string db_srv_version;  /* version */
         std::string db_name;
         std::string db_new_name;
