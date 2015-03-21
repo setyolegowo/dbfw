@@ -1,8 +1,8 @@
-OBJS:=mysql/mysql_con.o connection.o proxymap.o config.o dbfw.o log.o misc.o buffer.o main.o
+OBJS:=log.o misc.o buffer.o normalization.o config.o proxymap.o patterns.o dbfw.o connection.o mysql/mysql_con.o main.o
 
 # CPP=g++
 CXXFLAGS:=-g -Wall
-LIB=-lev
+LIB=-lev -lpcrecpp -lpcre
 
 dbfw: $(OBJS)
 # cd parser; make

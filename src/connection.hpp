@@ -10,7 +10,7 @@
 
 #include "buffer.hpp"
 // #include "dbpermobj.hpp"
-// #include "patterns.hpp"   // for SQLPatterns
+#include "patterns.hpp"   // for SQLPatterns
 #include "config.hpp"     //for DBProxyType
 
 #include <list>
@@ -25,12 +25,12 @@ class Connection
         Connection(int proxy_id);
         virtual ~Connection() {};
         bool close();
-        // bool check_query(std::string & query);
-        // virtual bool checkBlacklist(std::string & query, std::string & reason) = 0;
-        // virtual bool parseRequest(std::string & req, bool & hasResponse ) = 0;
-        // virtual bool parseResponse(std::string & response) = 0;
-        // virtual bool blockResponse(std::string & response) = 0;
-        // virtual SQLPatterns * getSQLPatterns() = 0;
+        bool check_query(std::string & query);
+        virtual bool checkBlacklist(std::string & query, std::string & reason) = 0;
+        virtual bool parseRequest(std::string & req, bool & hasResponse ) = 0;
+        virtual bool parseResponse(std::string & response) = 0;
+        virtual bool blockResponse(std::string & response) = 0;
+        virtual SQLPatterns * getSQLPatterns() = 0;
 
         std::list<Connection*>::iterator location;
         std::list<Connection*> * connections;
@@ -59,7 +59,7 @@ class Connection
         Buffer response_out;
 
     private:
-        // unsigned int calculateRisk(std::string & query, std::string &reason);
+        unsigned int calculateRisk(std::string & query, std::string &reason);
     
 };
 

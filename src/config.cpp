@@ -56,7 +56,7 @@ void DBFWConfig::init()
     re_bruteforce       = 15;
     
     log_level           = 3;
-    log_file            = "/var/log/greensql.log";
+    log_file            = "/var/log/dbfw.log";
 }
 
 bool DBFWConfig::load()

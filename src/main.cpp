@@ -102,10 +102,10 @@ static bool fix_dir_name (std::string & conf_dir)
 int initLinux()
 {
     signal(SIGPIPE, SIG_IGN);
-    signal(SIGQUIT, killer);
-    signal(SIGHUP, killer);
-    signal(SIGINT, killer);
-    signal(SIGTERM, killer);
+    // signal(SIGQUIT, killer);
+    // signal(SIGHUP, killer);
+    // signal(SIGINT, killer);
+    // signal(SIGTERM, killer);
     return 1;
 }
 

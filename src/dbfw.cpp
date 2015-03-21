@@ -220,7 +220,7 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
             delete conn;
         }
 
-        conn->request_in.chop_back(len);
+        // conn->request_in.chop_back(len);
     }
 }
 bool DBFW::_proxyWriteCB(ev::io &watcher, Connection * conn)
@@ -304,7 +304,7 @@ void DBFW::backendCB(ev::io &watcher, int revents)
             conn->close();
             delete conn;
         }
-        conn->response_in.chop_back(len);
+        // conn->response_in.chop_back(len);
     }
 
     return;
@@ -483,58 +483,52 @@ int DBFW::_socketAccept(int serverfd)
 
 bool DBFW::_proxyValidateClientRequest(Connection * conn)
 {
-    // std::string request = "";
-    // bool hasResponse = false;
-    // request.reserve(min_buf_size);
-    // int len = 0;
+    std::string request = "";
+    bool hasResponse = false;
+    request.reserve(min_buf_size);
+    int len = 0;
 
-    // // mysql_validate(request);
-    // if (conn->parseRequest(request, hasResponse) == false)
-    // {
-    //     logevent(NET_DEBUG, "Failed to parse request, closing socket.\n");
-    //     return false;
-    // }
+    // mysql_validate(request);
+    if (conn->parseRequest(request, hasResponse) == false)
+    {
+        logEvent(NET_DEBUG, "Failed to parse request, closing socket.\n");
+        return false;
+    }
 
-    // len = (int)request.size();
+    len = (int)request.size();
 
-    // if (hasResponse == true)
-    // {
-    //     // we can push response to response_in or response_out queues
-    //     if (conn->response_in.size() != 0)
-    //     {
-    //         if (ProxyValidateServerResponse(conn) == false)
-    //         {
-    //             return false;
-    //         }
-    //     } else if (conn->response_out.size() != 0)
-    //     {
-    //         Proxy_write_cb( conn->proxy_event.ev_fd, conn);
-    //     }
-    // }
-    // if (len <= 0)
-    //     return true;
+    if (hasResponse == true) {
+        // we can push response to response_in or response_out queues
+        if (conn->response_in.size() != 0) {
+            if (_proxyValidateServerResponse(conn) == false)
+                return false;
+        } else if (conn->response_out.size() != 0)
+            _proxyWriteCB(conn->proxy_event, conn);
+    }
+
+    if (len <= 0) return true;
 
     //push request
-    // conn->request_out.append(request.c_str(), (int)request.size());
-    conn->request_out.append((const char *) conn->request_in.raw(),
-        (int) conn->request_in.size());
+    conn->request_out.append(request.c_str(), (int)request.size());
+    // conn->request_out.append((const char *) conn->request_in.raw(),
+    //     (int) conn->request_in.size());
 
     return _backendWriteCB(conn->backend_event, conn);
 }
 
 bool DBFW::_proxyValidateServerResponse(Connection * conn)
 {
-    // std::string response;
-    // response.reserve(min_buf_size);
+    std::string response;
+    response.reserve(min_buf_size);
 
-    // conn->parseResponse(response);
+    conn->parseResponse(response);
     
-    // //push response
-    // if (response.size() == 0)
-    // {
-    //     return true;
-    // }
-    conn->response_out.append((const char *) conn->response_in.raw(), (int)conn->response_in.size());
+    //push response
+    if (response.size() == 0)
+        return true;
+
+    conn->response_out.append(response.c_str(), (int)response.size());
+    
     // if an error occurred while sending data, this socket will be closed.
     return _proxyWriteCB(conn->proxy_event, conn);
 }
