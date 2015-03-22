@@ -1,8 +1,9 @@
 //
-// GreenSQL DB Connection class implementation.
-//
-// Copyright (c) 2007 GreenSQL.NET <stremovsky@gmail.com>
-// License: GPL v2 (http://www.gnu.org/licenses/gpl.html)
+// DBFW Connection class implementation
+// 
+// Created by  : Setyo Legowo (13511071@std.stei.itb.ac.id)
+// Institution : Institut Teknologi Bandung
+// License     : GPL v2 (http://www.gnu.org/licenses/gpl-2.0.html)
 //
 
 #include "connection.hpp"
@@ -56,7 +57,7 @@ bool Connection::close()
 bool Connection::check_query(std::string & query)
 {
     //return true;
-    // DBFWConfig * conf = DBFWConfig::getInstance();
+    DBFWConfig * conf = DBFWConfig::getInstance();
     std::string original_query = query;
     std::string reason = "";
 
@@ -65,10 +66,8 @@ bool Connection::check_query(std::string & query)
     // perform normalization - make a pattern of the query
     normalizeQuery( (DBProxyType) dbType, query);
     logEvent(SQL_DEBUG, "AFTER NORM   : %s\n", query.c_str());
-    logEvent(VV_DEBUG, "NOTHING TODO\n");
 
     // bool ret = false;
-    // bool privileged_operation = false;
     int risk = 0;
 
     // Optimization Changes
@@ -88,91 +87,21 @@ bool Connection::check_query(std::string & query)
 
  //    if ( (ret = checkBlacklist(pattern, reason)) == true)
  //    {
- //         privileged_operation = true;
     //  logEvent(SQL_DEBUG, "FORBIDEN     : %s\n", pattern.c_str());
  //    }
  //    // check if we find anything interesting
     risk = calculateRisk(original_query, reason);
     logEvent(SQL_DEBUG, "RISK         : %d\n", risk);
 
- //    DBBlockStatus block_status = db->GetBlockStatus();
-
- //    if ( block_status == ALWAYS_BLOCK_NEW )
- //    {
- //        reason += "Query blocked because it is not in whitelist.\n";
- //        logEvent(DEBUG, "Query blocked because it is not in whitelist.\n");
- //        logalert(iProxyId, db_name, db_user, db_user_ip, original_query,
- //                 pattern, reason, risk, (int)BLOCKED);
- //        // block this query
- //        return false;
- //    }
-
- //    if (privileged_operation)
- //    {
-    // risk = conf->re_block_level+1;
- //        if (block_status == PRIVILEGE_BLOCK || block_status == RISK_BLOCK)
- //        {
- //            logalert(iProxyId, db_name, db_user, db_user_ip, original_query,
- //                     pattern, reason, risk, (int)BLOCKED);
- //            // block this query
- //            return false;
-    // } else if (block_status == LEARNING_MODE ||
-    //     block_status == LEARNING_MODE_3DAYS ||
-    //     block_status == LEARNING_MODE_7DAYS)
-    // {
-    //     db->AddToWhitelist(db_user, pattern);
- //            logwhitelist(iProxyId, db_name, db_user, db_user_ip, original_query,
- //                         pattern, reason, risk, (int)HIGH_RISK);
-    //     return true;
- //        } else {
- //            // block_status == RISK_SIMULATION 
- //            // block_status == LEARNING_MODE
- //            logalert(iProxyId, db_name, db_user, db_user_ip, original_query,
- //                     pattern, reason, risk, (int)HIGH_RISK);
- //            return true;
- //        }
- //    }
-
- //    if (block_status == LEARNING_MODE ||
- //        block_status == LEARNING_MODE_3DAYS ||
- //        block_status == LEARNING_MODE_7DAYS)
- //    {
- //        db->AddToWhitelist(db_user, pattern);
- //        if (risk >= conf->re_block_level)
- //        {
- //            logwhitelist(iProxyId, db_name, db_user, db_user_ip, original_query,
- //                     pattern, reason, risk, (int)HIGH_RISK);
- //        } else if (risk >= conf->re_warn_level)
- //        {
- //            logwhitelist(iProxyId, db_name, db_user, db_user_ip, original_query,
- //                     pattern, reason, risk, (int)WARN);
- //        } else {
- //            logwhitelist(iProxyId, db_name, db_user, db_user_ip, original_query,
- //                     pattern, reason, risk, (int)LOW);
-    // }
-
- //        return true;
- //    }
-
- //    DBBlockLevel risk_block_level = HIGH_RISK;
- //    if (block_status == RISK_BLOCK)
- //    {
- //        risk_block_level = BLOCKED;
- //    }
-
- //    if (risk >= conf->re_block_level) 
- //    {
- //        logalert(iProxyId, db_name, db_user, db_user_ip, original_query,
- //                 pattern, reason, risk, (int)risk_block_level);
- //        if (risk_block_level == BLOCKED)
- //            return false;
- //    } 
- //    else if (risk >= conf->re_warn_level)
- //    {
- //        //warn level
- //        logalert(iProxyId, db_name, db_user, db_user_ip, original_query,
- //                 pattern, reason, risk, (int)WARN);
- //    }
+    if (risk >= conf->re_block_level) {
+        logAlert(iProxyId, db_name, db_user, db_user_ip, original_query,
+            query, reason, risk, 2);
+        return false;
+    } else if (risk >= conf->re_warn_level) {
+        //warn level
+        logAlert(iProxyId, db_name, db_user, db_user_ip, original_query,
+            query, reason, risk, 1);
+    }
 
     return true;
 }

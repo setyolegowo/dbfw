@@ -19,4 +19,8 @@ bool logClose  ();
 void logEvent  (ErrorType type, const char * fmt, ...);
 void logHex    (ErrorType type, const unsigned char * data, int size);
 
+bool logAlert(int proxy_id, std::string & dbname, std::string & dbuser, std::string & dbuserip,
+        std::string & query, std::string & pattern, 
+        std::string & reason, int risk, int block);
+
 #endif /* DBFW_LOG_HPP */
