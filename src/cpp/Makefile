@@ -2,7 +2,7 @@ OBJS:=log.o misc.o buffer.o normalization.o config.o proxymap.o patterns.o dbfw.
 OOBJS:=parser/parser.o parser/sql.o parser/sql.tab.o
 
 # CPP=g++
-CXXFLAGS:=-g -Wno-deprecated
+CXXFLAGS:=-g -Wall
 LIB=-lev -lpcrecpp -lpcre
 
 dbfw: $(OBJS)
