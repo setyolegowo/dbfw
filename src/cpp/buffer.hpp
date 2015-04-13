@@ -25,6 +25,7 @@ public:
 	bool chop_back(int size);
 	//
 	bool pop(std::string & res, int size,bool appendval = false);
+	bool replaceChar(int pos, char c);
 	//return raw data
 	const unsigned char * raw();
 	//find string in buffer

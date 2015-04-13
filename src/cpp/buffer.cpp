@@ -48,6 +48,12 @@ bool Buffer::pop(std::string & res, int size,bool appendval)
 	return true;
 }
 
+bool Buffer::replaceChar(int pos, char c)
+{
+    _buff.replace(pos, 1, 1, c);
+    return true;
+}
+
 const unsigned char * Buffer::raw()
 {
         return (const unsigned char *)_buff.c_str();

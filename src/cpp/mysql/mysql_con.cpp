@@ -11,6 +11,10 @@
 #include "../config.hpp"
 // #include "../dbmap.hpp"
 
+static void getHeaderSQLFromCol(const unsigned char * /* data */, int /* col_num */, std::string & /* output */);
+static void getBodySQLFromCol(const unsigned char * /* data */, int /* num_col */, std::string & /* output */);
+static void maskResultSetFromCol(const unsigned char * /* data */, int /* col_num */, int /* start */, Buffer & /* output */);
+
 static SQLPatterns mysql_patterns;
 
 bool mysqlPatternsInit(std::string & path)
@@ -425,6 +429,9 @@ bool MySQLConnection::parseResponse(std::string & response)
 {
     size_t full_size = response_in.size();
     size_t start = 0;
+    int state;
+    int number_of_fields;
+    std::string buffer;
     // size_t header_size;
     if (full_size < 5) {
        logEvent(NET_DEBUG, "received %d bytes of response\n", full_size);
@@ -437,13 +444,33 @@ bool MySQLConnection::parseResponse(std::string & response)
     unsigned int packet_id = data[3];
     // unsigned int type = data[4];
 
-    logEvent(NET_DEBUG, "packet size expected %d bytes (received %d)\n", response_size, full_size);
-    logEvent(SQL_DEBUG, "server packet %d\n", packet_id);
-
+    logEvent(SQL_DEBUG, "server packet   : %d\n", packet_id);
+    logEvent(SQL_DEBUG, "last command id : %d\n", lastCommandId);
     if (!((start_response && data[4] == MYSQL_SRV_ERROR) || lastCommandId == MYSQL_DB || first_request || SecondPacket)) { //-V112
+        number_of_fields = data[4];
+        state = 0;
+        fields.clear();
+        logEvent(V_DEBUG, "Number of fields: %d\n", number_of_fields);
         while((start + response_size) <= full_size) {
+            if(start > 0 && lastCommandId == MYSQL_QUERY) {
+                if(state < number_of_fields) {
+                    getHeaderSQLFromCol(data + start, 7, buffer);
+                    fields.push_back(buffer);
+                    logEvent(V_DEBUG, "Data on Column 7: %s\n", buffer.c_str());
+                    state++;
+                } else {
+                    if((data[start+2]<<16 | data[start+1] << 8 | data[start]) <= 5) {
+                        logEvent(V_DEBUG, "EOF MARKER: %d\n", (int) data[start + 4]);
+                    } else {
+                        getBodySQLFromCol(data + start, number_of_fields, buffer);
+                        if(fields[1] == "nama") maskResultSetFromCol(data + start, 2, start, response_in);
+                        logEvent(V_DEBUG, "Data on field: %s\n", buffer.c_str());
+                        // logHex(V_DEBUG, data + start, (data[start+2]<<16 | data[start+1] << 8 | data[start]) + 4);
+                    }
+                }
+            }
             start += response_size;
-            if(start + 5 < full_size)
+            if(start + 5 < full_size) // +5 because EOF protocol
                 response_size = (data[start+2]<<16 | data[start+1] << 8 | data[start]) + 4;
             else
                 break;
@@ -468,9 +495,9 @@ bool MySQLConnection::parseResponse(std::string & response)
     }
 
     response_size = (data[2]<<16 | data[1] << 8 | data[0]) + 4;
+    logEvent(V_DEBUG, "START : RESPONSE SIZE : FULL SIZE => [%d : %d : %d]\n", start, response_size, full_size);
     while(start + response_size <= full_size)
     {
-        logEvent(NET_DEBUG, " response: packet size expected %d bytes (received %d)\n",start + response_size, full_size);
         size_t header_size = 0;
 
         // request's equivalent response
@@ -564,7 +591,7 @@ bool MySQLConnection::ParseResponsePacket(const unsigned char* data, size_t& res
         }
 
         return true;
-    } 
+    }
 
     // check if the previous command was change db
     if (lastCommandId == MYSQL_DB) {
@@ -585,4 +612,50 @@ bool MySQLConnection::ParseResponsePacket(const unsigned char* data, size_t& res
     header_size = response_size;
 
     return true;
+}
+
+void getHeaderSQLFromCol(const unsigned char * data, int col_num, std::string & output)
+{
+    output.clear();
+    int offset = 4;
+    int length = (data[2]<<16 | data[1] << 8 | data[0]) + 4;
+    // char packet_id = data[3];
+    for(int i = 2; i < col_num && offset < length; i++)
+        offset += data[offset] + 1;
+    if(data[offset] > 0 && offset < length) {
+        for(int i = 1; i < data[offset] + 1; i++)
+            output.append(1, data[offset + i]);
+    }
+}
+
+void getBodySQLFromCol(const unsigned char * data, int num_col, std::string & output)
+{
+    output.clear();
+    int offset = 4;
+    int length = (data[2]<<16 | data[1] << 8 | data[0]) + 4;
+    // char packet_id = data[3];
+    for(int i = 0; i < num_col && offset < length; i++) {
+        if(data[offset] > 0) {
+            for(int j = 1; j < data[offset] + 1; j++)
+                output.append(1, data[offset + j]);
+        }
+        offset += data[offset] + 1;
+        if(i+1 < num_col && offset < length) {
+            output.append(" | ");
+        }
+    }
+}
+
+void maskResultSetFromCol(const unsigned char * data, int col_num, int start, Buffer & output)
+{
+    logEvent(VV_DEBUG, "maskResultSetFromCol fired\n");
+    int offset = 4;
+    int length = (data[2]<<16 | data[1] << 8 | data[0]) + 4;
+    // char packet_id = data[3];
+    for(int i = 1; i < col_num && offset < length; i++)
+        offset += data[offset] + 1;
+    if(data[offset] > 0 && offset < length) {
+        for(int i = 1; i < data[offset] + 1; i++)
+            output.replaceChar(start + offset + i, '*');
+    }
 }
