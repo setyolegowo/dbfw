@@ -57,6 +57,9 @@ void DBFWConfig::init()
     
     log_level           = 3;
     log_file            = "/var/log/dbfw.log";
+
+    perm_port           = 5000;
+    perm_host           = "127.0.0.1";
 }
 
 bool DBFWConfig::load()
@@ -116,6 +119,7 @@ bool DBFWConfig::load()
         
         if (section == "risk engine")   parse_re_setting  (key, value);
         else if (section == "logging")  parse_log_setting (key, value);
+        else if (section == "dbperm")  parse_perm_setting (key, value);
         else 
             logEvent(DEBUG, "No section for this key-value configuration: \"%s\"", line.c_str());
     }
@@ -149,6 +153,16 @@ bool DBFWConfig::parse_log_setting(std::string & key, std::string & value)
     else if (key == "logfile")  log_file = value;
     else 
         logEvent(DEBUG, "[Parse LOG] No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
+
+    return true;
+}
+
+bool DBFWConfig::parse_perm_setting(std::string & key, std::string & value)
+{
+    if (key == "port")      perm_port = atoi(value.c_str());
+    else if (key == "host") perm_host = value;
+    else 
+        logEvent(DEBUG, "[Parse DBPerm] No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
 
     return true;
 }

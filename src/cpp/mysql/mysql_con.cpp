@@ -9,6 +9,7 @@
 
 #include "../normalization.hpp"
 #include "../config.hpp"
+#include "../dbperm.hpp"
 // #include "../dbmap.hpp"
 
 static void getHeaderSQLFromCol(const unsigned char * /* data */, int /* col_num */, std::string & /* output */);
@@ -290,6 +291,10 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
 
             hasResponse = true;
         }
+        DBPerm perm;
+        std::string action = "select";
+        std::string database = "database";
+        perm.oneCheckPermission(db_user, action, database);
     } else if ((type == MYSQL_CREATE_DB || type == MYSQL_DROP_DB || type == MYSQL_FIELD_LIST) && request_size > 5) {
         // we will emulate create database command and run it as if it is a regular command
         if (type == MYSQL_CREATE_DB)

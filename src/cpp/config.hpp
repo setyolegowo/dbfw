@@ -42,6 +42,9 @@ class DBFWConfig {
         int log_level;
         std::string log_file;
 
+        int perm_port;
+        std::string perm_host;
+
     private:
     	static DBFWConfig * _obj;
         DBFWConfig ();
@@ -50,6 +53,7 @@ class DBFWConfig {
 
         bool parse_re_setting  (std::string & key, std::string & value);
         bool parse_log_setting (std::string & key, std::string & value);
+        bool parse_perm_setting (std::string & key, std::string & value);
 
 };
 

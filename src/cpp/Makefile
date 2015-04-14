@@ -1,4 +1,4 @@
-OBJS:=log.o misc.o buffer.o normalization.o config.o proxymap.o patterns.o dbfw.o connection.o mysql/mysql_con.o main.o
+OBJS:=log.o misc.o buffer.o normalization.o config.o proxymap.o patterns.o dbfw.o connection.o dbperm.o mysql/mysql_con.o main.o
 OOBJS:=parser/parser.o parser/sql.o parser/sql.tab.o
 
 # CPP=g++
