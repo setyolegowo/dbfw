@@ -31,12 +31,15 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Sample attribute finder module
  */
 public class SampleAttributeFinderModule extends AttributeFinderModule{
 
+    private Log log = LogFactory.getLog(SampleAttributeFinderModule.class);
     private URI defaultSubjectId;
 
     public SampleAttributeFinderModule() {
@@ -44,7 +47,7 @@ public class SampleAttributeFinderModule extends AttributeFinderModule{
         try {
             defaultSubjectId = new URI("urn:oasis:names:tc:xacml:1.0:subject:subject-id");
         } catch (URISyntaxException e) {
-           //ignore
+           log.error(e);
         }
 
     }

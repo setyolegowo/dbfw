@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Set;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.wso2.balana.Balana;
@@ -36,6 +38,7 @@ import org.xml.sax.SAXException;
  */
 public final class DBFWContextHandler {
 
+    private Log log = LogFactory.getLog(DBFWContextHandler.class);
     private Balana balana;
     private String username;
     private String action;
@@ -137,10 +140,11 @@ public final class DBFWContextHandler {
                     }
                 }
             } catch (ParsingException e) {
+                log.error(e);
             }
 
         } else {
-            System.err.println("\nUser name, action, and table resource can not be empty\n");
+            log.error("User name, action, and table resource can not be empty");
         }
     }
     
@@ -182,13 +186,13 @@ public final class DBFWContextHandler {
         try {
             doc = dbf.newDocumentBuilder().parse(inputStream);
         } catch (ParserConfigurationException | SAXException | IOException e) {
-            System.err.println("DOM of request element can not be created from String");
+            log.error("DOM of request element can not be created from String");
             return null;
         } finally {
             try {
                 inputStream.close();
             } catch (IOException e) {
-               System.err.println("Error in closing input stream of XACML response");
+               log.error("Error in closing input stream of XACML response");
             }
         }
         return doc.getDocumentElement();
@@ -201,7 +205,7 @@ public final class DBFWContextHandler {
             String policyLocation = (new File(".")).getCanonicalPath() + File.separator + "conf\\resources";
             System.setProperty(FileBasedPolicyFinderModule.POLICY_DIR_PROPERTY, policyLocation);
         } catch (IOException e) {
-            System.err.println("Can not locate policy repository");
+            log.error("Can not locate policy repository");
         }
         // create default instance of Balana
         balana = Balana.getInstance();
