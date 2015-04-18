@@ -240,7 +240,7 @@ public final class DBFWContextHandler {
 
     }
     
-    public static void main(String[] args) {
-        new DBFWContextHandler();
-    }
+//    public static void main(String[] args) {
+//        new DBFWContextHandler();
+//    }
 }
