@@ -10,6 +10,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  *
@@ -17,6 +19,7 @@ import java.util.concurrent.Executors;
  */
 public class ConnectionManager implements Runnable {
     
+    private Log log = LogFactory.getLog(ConnectionManager.class);
     protected int          serverPort    = 6000;
     protected ServerSocket serverSocket  = null;
     protected boolean      isStopped     = false;
@@ -24,8 +27,7 @@ public class ConnectionManager implements Runnable {
     protected ExecutorService threadPool =
         Executors.newFixedThreadPool(10);
     
-    public ConnectionManager() {
-    }
+    public ConnectionManager() {}
 
     @Override
     public void run() {
@@ -38,8 +40,9 @@ public class ConnectionManager implements Runnable {
             try {
                 clientSocket = this.serverSocket.accept();
             } catch (IOException e) {
+                log.error(e);
                 if(isStopped()) {
-                    System.out.println("Server Stopped.") ;
+                    log.debug("Server Stopped.");
                     break;
                 }
                 throw new RuntimeException(
@@ -50,7 +53,7 @@ public class ConnectionManager implements Runnable {
             );
         }
         this.threadPool.shutdown();
-        System.out.println("Server Stopped.") ;
+        log.debug("Server Stopped.");
     }
     
     private synchronized boolean isStopped() {
@@ -77,11 +80,8 @@ public class ConnectionManager implements Runnable {
     public static void main(String[] args) {
         ConnectionManager server = new ConnectionManager();
         new Thread(server).start();
-        
-        while(!Thread.currentThread().isInterrupted()) {
-            
-        }
-        System.out.println("Stopping Server");
+
+        while(!Thread.currentThread().isInterrupted()){}
         server.stop();
     }
 }

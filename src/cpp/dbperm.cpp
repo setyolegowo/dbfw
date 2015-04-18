@@ -44,9 +44,9 @@ bool DBPerm::addAttr(std::string& attr)
 bool DBPerm::checkout(std::string& subject, std::string& action, std::string& uri)
 {
     Buffer buf;
-    std::string temp = "\n";
+    std::string temp = " ";
     buf.append(temp.c_str(), 1);
-    buf.replaceChar(0, 1);
+    buf.replaceChar(0, '1');
     buf.append(subject);
     buf.append(temp.c_str(), 1);
     buf.append(action);
@@ -62,9 +62,9 @@ bool DBPerm::checkout(std::string& subject, std::string& action, std::string& ur
 bool DBPerm::oneCheckPermission(std::string& subject, std::string& action, std::string& uri)
 {
     Buffer buf;
-    std::string temp = "\n";
+    std::string temp = " ";
     buf.append(temp.c_str(), 1);
-    buf.replaceChar(0, 2);
+    buf.replaceChar(0, '2');
     buf.append(subject);
     buf.append(temp.c_str(), 1);
     buf.append(action);

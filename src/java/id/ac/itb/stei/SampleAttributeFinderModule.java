@@ -51,23 +51,23 @@ public class SampleAttributeFinderModule extends AttributeFinderModule{
 
     @Override
     public Set<String> getSupportedCategories() {
-        Set<String> categories = new HashSet<String>();
+        Set<String> categories = new HashSet<>();
         categories.add("urn:oasis:names:tc:xacml:1.0:subject-category:access-subject");
         return categories;
     }
 
     @Override
     public Set getSupportedIds() {
-        Set<String> ids = new HashSet<String>();
+        Set<String> ids = new HashSet<>();
         ids.add("http://wso2.org/attribute/roleNames");
         return ids;   
     }
 
     @Override
-    public EvaluationResult findAttribute(URI attributeType, URI attributeId, String issuer,
-                                                            URI category, EvaluationCtx context) {
+    public EvaluationResult findAttribute(URI attributeType, URI attributeId,
+            String issuer, URI category, EvaluationCtx context) {
         String roleName = null;
-        List<AttributeValue> attributeValues = new ArrayList<AttributeValue>();
+        List<AttributeValue> attributeValues = new ArrayList<>();
 
         EvaluationResult result = context.getAttribute(attributeType, defaultSubjectId, issuer, category);
         if(result != null && result.getAttributeValue() != null && result.getAttributeValue().isBag()){
@@ -91,15 +91,6 @@ public class SampleAttributeFinderModule extends AttributeFinderModule{
     }
 
     private String findRole(String userName){
-
-        if(userName.equals("bob")){
-            return "publicUsers";
-        } else if(userName.equals("alice")){
-            return "internalUsers";
-        } else if(userName.equals("peter")){
-            return "adminUsers";
-        }
-
-        return null;
+        return userName;
     }
 }

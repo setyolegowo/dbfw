@@ -7,7 +7,6 @@ package id.ac.itb.stei;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -30,22 +29,37 @@ public class ConnectionWorker implements Runnable {
     @Override
     public void run() {
         try {
-            int charsRead = 0;
+            int charsRead;
             BufferedReader in = new BufferedReader(
                     new InputStreamReader(clientSocket.getInputStream())
             );
-            while((charsRead = in.read(buffer)) >= 0) {
+            if((charsRead = in.read(buffer)) >= 0) {
+                boolean error = false;
                 String message = new String(buffer).substring(0, charsRead);
-                System.out.println("msg :"+message);
-                break;
+                String[] msg = message.split(" ");
+                System.out.println("msg :" + message);
+                DBFWContextHandler dbfw = new DBFWContextHandler(msg[1],
+                        msg[2], msg[3]);
+                if(msg[0].equalsIgnoreCase("1")) {
+                    // nothing
+                } else if(msg[0].equalsIgnoreCase("2")) {
+                    for(int i=4; i < msg.length; i++){
+                        dbfw.addColumn(msg[i]);
+                    }
+                } else
+                    error = true;
+                
+                if(!error){
+                    dbfw.run();
+                    try (OutputStream output = clientSocket.getOutputStream()) {
+                        output.write(("1 " + dbfw.getResult()).getBytes());
+                    }
+                } else {
+                    try (OutputStream output = clientSocket.getOutputStream()) {
+                        output.write("0 ERROR".getBytes());
+                    }
+                }
             }
-            long time;
-            try (OutputStream output = clientSocket.getOutputStream()) {
-                time = System.currentTimeMillis();
-                output.write(("HTTP/1.1 200 OK\n\nWorkerRunnable: " +
-                        this.serverText + " - " + time).getBytes());
-            }
-            System.out.println("Request processed: " + time);
         } catch (IOException e) {
         }
     }

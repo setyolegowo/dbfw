@@ -6,9 +6,9 @@
 package id.ac.itb.stei;
 
 import java.io.ByteArrayInputStream;
-import java.io.Console;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -37,69 +37,110 @@ import org.xml.sax.SAXException;
 public final class DBFWContextHandler {
 
     private Balana balana;
-    private static final String imageNames = "add.gif\tedit.gif\tdelete.gif\tcancel.gif\tcopy.gif\tmove.gif\tview.gif\thelp.gif\n";
+    private String username;
+    private String action;
+    private String tableResource;
+    private String result;
+    public ArrayList<String> attrResource = new ArrayList<>();
+
+    public void setAction(String action) {
+        this.action = action;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setTableResource(String tableResource) {
+        this.tableResource = tableResource;
+    }
+    
+    public void addColumn(String name) {
+        attrResource.add(name);
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public String getTableResource() {
+        return tableResource;
+    }
+    
+    public String getResult() {
+        if(result.trim().length() > 0)
+            return result;
+        else
+            return null;
+    }
+    
+    public void clearAttrResource() {
+        attrResource.clear();
+    }
     
     public DBFWContextHandler() {
-        Console console;
-        String userName = "bob";
-
-        printDescription();
-
+        attrResource.clear();
         initBalana();
+    }
+    
+    public DBFWContextHandler(String username) {
+        this.username = username;
+        attrResource.clear();
+        initBalana();
+    }
+    
+    public DBFWContextHandler(String username, String action) {
+        this.username = username;
+        this.action = action;
+        attrResource.clear();
+        initBalana();
+    }
+    
+    public DBFWContextHandler(String username, String action, String tableResource) {
+        this.username = username;
+        this.action = action;
+        this.tableResource = tableResource;
+        attrResource.clear();
+        initBalana();
+    }
+    
+    public void run() {
+        if(this.username != null && this.username.trim().length() > 0 && 
+                this.action != null && this.action.trim().length() > 0 &&
+                this.tableResource != null && this.tableResource.trim().length() > 0){
 
-        System.out.println("\nFollowing are the all static images names that are loaded to web page : \n");
-        
-        System.out.println(imageNames);
-
-        if ((console = System.console()) != null){
-            userName = console.readLine("Filter authorized images for user : ");
-        }
-        
-        if(userName != null && userName.trim().length() > 0){
-
-            String request = createXACMLRequest(userName);
+            String request = createXACMLRequest();
             PDP pdp = getPDPNewInstance();
-
-//            System.out.println("\n======================== XACML Request ====================");
-//            System.out.println(request);
-//            System.out.println("===========================================================");
-
             String response = pdp.evaluate(request);
-
-//            System.out.println("\n======================== XACML Response ===================");
-//            System.out.println(response);
-//            System.out.println("===========================================================");
-
-            Set<String> resultImages = new HashSet<>();
+            Set<String> resultColumns = new HashSet<>();
 
             try {
                 ResponseCtx responseCtx = ResponseCtx.getInstance(getXacmlResponse(response));
                 Set<AbstractResult> results  = responseCtx.getResults();
-                for(AbstractResult result : results){
-                    if(AbstractResult.DECISION_PERMIT == result.getDecision()){
-                        Set<Attributes> attributesSet = ((Result)result).getAttributes();
+                for(AbstractResult _result : results){
+                    if(AbstractResult.DECISION_PERMIT == _result.getDecision()){
+                        this.result = "ok";
+                        Set<Attributes> attributesSet = ((Result)_result).getAttributes();
                         for(Attributes attributes : attributesSet){
                             for(Attribute attribute : attributes.getAttributes()){
-                                resultImages.add(attribute.getValue().encode());
+                                resultColumns.add(attribute.getValue().encode());
                             }
                         }
+                    } else if(AbstractResult.DECISION_INDETERMINATE == _result.getDecision()){
+                        this.result = "ok";
+                    } else {
+                        this.result = "no";
                     }
                 }
             } catch (ParsingException e) {
             }
 
-            if(resultImages.size() > 0){
-                System.out.println("\n" + userName + " is authorized to view following images...\n");
-                for(String result : resultImages){
-                    System.out.print(result + "\t");
-                }
-                System.out.println("\n");
-            } else {
-                System.out.println("\n" + userName + " is NOT authorized to view any images..!!!\n");
-            }
-
         } else {
-            System.err.println("\nUser name can not be empty\n");                
+            System.err.println("\nUser name, action, and table resource can not be empty\n");
         }
     }
     
@@ -158,7 +199,6 @@ public final class DBFWContextHandler {
         try{
             // using file based policy repository. so set the policy location as system property
             String policyLocation = (new File(".")).getCanonicalPath() + File.separator + "conf\\resources";
-            System.out.println(policyLocation);
             System.setProperty(FileBasedPolicyFinderModule.POLICY_DIR_PROPERTY, policyLocation);
         } catch (IOException e) {
             System.err.println("Can not locate policy repository");
@@ -167,80 +207,32 @@ public final class DBFWContextHandler {
         balana = Balana.getInstance();
     }
     
-    private void printDescription(){
-
-        System.out.println("\nIn a web page,  there can be various static contents. Lets assume web page " +
-            "contains various type of static images.  These images are not authorized to view for all users. " +
-            "There are specific permissions for each image. Therefore before web page is viewed by user, " +
-            "authorization must be done for each images and dynamically filter the authorized content for user. " +
-            "To achieve, in a fine grained, dynamic and attribute based authorization manner, we can use XACML " +
-            "based authorization  engine such as WSO2 Balana.\n");    
-
-    }
-    
-    public String createXACMLRequest(String userName){
-
-        return "<Request xmlns=\"urn:oasis:names:tc:xacml:3.0:core:schema:wd-17\" CombinedDecision=\"false\" ReturnPolicyIdList=\"false\">\n" +
+    public String createXACMLRequest(){
+        String retval = "<Request xmlns=\"urn:oasis:names:tc:xacml:3.0:core:schema:wd-17\" CombinedDecision=\"false\" ReturnPolicyIdList=\"false\">\n" +
                 "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:action\">\n" +
                 "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:action:action-id\" IncludeInResult=\"false\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">view</AttributeValue>\n" +
+                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">"+ action +"</AttributeValue>\n" +
                 "</Attribute>\n" +
                 "</Attributes>\n" +
                 "<Attributes Category=\"urn:oasis:names:tc:xacml:1.0:subject-category:access-subject\">\n" +
                 "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:subject:subject-id\" IncludeInResult=\"false\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">"+ userName +"</AttributeValue>\n" +
+                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">"+ username +"</AttributeValue>\n" +
                 "</Attribute>\n" +
                 "</Attributes>\n" +
                 "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:resource\">\n" +
                 "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">index.jsp</AttributeValue>\n" +
+                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">" + tableResource + "</AttributeValue>\n" +
                 "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:image\">\n" +
+                "</Attributes>\n";
+        for (String row : attrResource) {
+            retval += "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:column\">\n" +
                 "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">add.gif</AttributeValue>\n" +
+                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">" + row + "</AttributeValue>\n" +
                 "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:image\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">edit.gif</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:image\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">delete.gif</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:image\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">cancel.gif</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:image\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">copy.gif</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:image\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">move.gif</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:image\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">view.gif</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:image\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">help.gif</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n" +
-                "</Request>";
+                "</Attributes>\n";
+        }
+        retval += "</Request>";
+        return retval;
 
     }
-    
-//    public static void main(String[] args) {
-//        new DBFWContextHandler();
-//    }
 }
