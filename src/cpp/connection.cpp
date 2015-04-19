@@ -14,6 +14,7 @@
 #include "normalization.hpp"
 // #include "alert.hpp"
 #include "parser/parser.hpp"     // for query_risk struct
+#include "dbperm.hpp"
 // #include "dbmap.hpp"
 
 Connection::Connection(int proxy_id)
@@ -28,6 +29,8 @@ Connection::Connection(int proxy_id)
     db_user        = "";
     db_type        = "";
     db_user_ip     = "";
+	sql_tabel      = "";
+    sql_action     = "";
     SecondPacket   = false;
     first_response = true;
 }
@@ -69,7 +72,7 @@ bool Connection::check_query(std::string & query)
 
     // bool ret = false;
     int risk = 0;
-
+    
     // Optimization Changes
     // In case we are in automatic block of the new commands
     // we do not need to calculate query risk if the query
@@ -93,6 +96,28 @@ bool Connection::check_query(std::string & query)
     risk = calculateRisk(original_query, reason);
     logEvent(SQL_DEBUG, "RISK         : %d\n", risk);
 
+    if(sql_action == "select") {
+	    DBPerm perm;
+	    perm.addAttr(sql_tabel);
+	    std::string uri_resource = iProxyId + "/" + db_name;
+	    perm.checkout(db_user, sql_action, uri_resource);
+	    if(perm.error_result) {
+	    	logEvent(DEBUG, "Permission error\n");
+	    } else {
+	    	if(perm.getResult() > 0) {
+	    		if(perm.mask_map.size() == 1) {
+                    if(perm.getResult() == 1) {
+    	    			logEvent(DEBUG, "Permission denied\n");
+    	    			return false;
+                    } else {
+                        logEvent(DEBUG, "Else permission\n");
+                    }
+	    		} else
+	    			logEvent(DEBUG, "Unknown permission\n");
+	    	}
+	    }
+	}
+
     if (risk >= conf->re_block_level) {
         logAlert(iProxyId, db_name, db_user, db_user_ip, original_query,
             query, reason, risk, 2);
@@ -112,7 +137,7 @@ unsigned int Connection::calculateRisk(std::string & query, std::string & reason
     unsigned int ret = 0;
 
     struct query_risk risk;
-    query_parse(&risk, getSQLPatterns(), query.c_str());
+    query_parse(&risk, getSQLPatterns(), query.c_str(), sql_action, sql_tabel);
 
     if (conf->re_sql_comments > 0 && risk.has_comment == 1) {
         reason += "Query has comments\n";

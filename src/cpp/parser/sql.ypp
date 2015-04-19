@@ -101,20 +101,20 @@ command:
             | update_cmd
 	    ;
 
-select_cmd:   SELECT select_options select_exps FROM table_references where_cond group_cond having_cond order_cond limit_cond procedure_cond union_cond end_cond { $$=$3; }
-            | SELECT select_options select_exps { $$=$3; }
+select_cmd:   SELECT select_options select_exps FROM table_references where_cond group_cond having_cond order_cond limit_cond procedure_cond union_cond end_cond { $$=$3; clb_found_action("select"); }
+            | SELECT select_options select_exps { $$=$3; clb_found_action("select"); }
             ;
 
-insert_cmd:   INSERT INTO
+insert_cmd:   INSERT INTO { clb_found_action("insert"); }
             ;
 
-show_cmd:     SHOW
+show_cmd:     SHOW { clb_found_action("show"); }
             ;
 
-delete_cmd:   DELETE delete_option_list delete_table_list FROM table_references where_cond order_cond limit_cond end_cond
+delete_cmd:   DELETE delete_option_list delete_table_list FROM table_references where_cond order_cond limit_cond end_cond { clb_found_action("delete"); }
             ;
 
-update_cmd:   UPDATE delete_option_list table_references SET set_cond where_cond order_cond limit_cond end_cond
+update_cmd:   UPDATE delete_option_list table_references SET set_cond where_cond order_cond limit_cond end_cond { clb_found_action("update"); }
             ;
 
 select_options: /* empty */

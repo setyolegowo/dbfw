@@ -23,8 +23,12 @@
 #include "config.hpp"
 #include "log.hpp"
 
+static int _parseToInt(int start, const char * buff, int size, int * use_char);
+static void _parseToString(int start, const char * buff, int size, int * use_char, std::string& output);
+
 DBPerm::DBPerm()
 {
+    error_result = true;
     attr_list.clear();
     mask_map.clear();
 }
@@ -45,8 +49,6 @@ bool DBPerm::checkout(std::string& subject, std::string& action, std::string& ur
 {
     Buffer buf;
     std::string temp = " ";
-    buf.append(temp.c_str(), 1);
-    buf.replaceChar(0, '1');
     buf.append(subject);
     buf.append(temp.c_str(), 1);
     buf.append(action);
@@ -63,8 +65,6 @@ bool DBPerm::oneCheckPermission(std::string& subject, std::string& action, std::
 {
     Buffer buf;
     std::string temp = " ";
-    buf.append(temp.c_str(), 1);
-    buf.replaceChar(0, '2');
     buf.append(subject);
     buf.append(temp.c_str(), 1);
     buf.append(action);
@@ -122,6 +122,7 @@ bool DBPerm::_connect(Buffer& buff)
     if((n = read(sockfd, _buff, sizeof(_buff)-1)) > 0) {
         _buff[n] = 0;
         logHex(VV_DEBUG, (unsigned char*) _buff, n);
+        _parsingResult(_buff, n);
     } else if(n < 0) {
         logEvent(NET_DEBUG, "Socket %d read error, errno=%d in DBPerm\n", sockfd, errno);
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
@@ -135,4 +136,64 @@ bool DBPerm::_connect(Buffer& buff)
     close(sockfd);
 
     return true;
+}
+int DBPerm::getResult()
+{
+    if(mask_map.size() == 1) {
+        return mask_map.begin()->second;
+    }
+    return 2;
+}
+
+bool DBPerm::_parsingResult(const char * buff, int size)
+{
+    if(buff[0] == '0' || size < 4) {
+        error_result = true;
+    } else { // buff[0] == '1'
+        int it = 2;
+        int tmp;
+        std::string tmp_sresult = "";
+        int tmp_iresult;
+        mask_map.clear();
+        int total = _parseToInt(it, buff, size, &tmp);
+        it += tmp;
+        for(int i = 0; i < total; i++) {
+            tmp_iresult = _parseToInt(it, buff, size, &tmp);
+            it += tmp;
+            _parseToString(it, buff, size, &tmp, tmp_sresult);
+            it += tmp;
+            mask_map.insert(std::pair<std::string, unsigned char>(tmp_sresult, tmp_iresult));
+        }
+        error_result = false;
+    }
+    return true;
+}
+
+int _parseToInt(int start, const char * buff, int size, int * use_char)
+{
+    int tmp = 0;
+    *use_char = 0;
+    for(int i = start; i < size; i++) {
+        if(buff[i] >= '0' && buff[i] <= '9')
+            tmp = (tmp*10) + (buff[i] - '0');
+        else
+            break;
+        *use_char = *use_char + 1;
+    }
+    *use_char = *use_char + 1;
+    return tmp;
+}
+
+void _parseToString(int start, const char * buff, int size, int * use_char, std::string& output)
+{
+    *use_char = 0;
+    output = "";
+    for(int i = start; i < size; i++) {
+        if((buff[i] >= 'A' && buff[i] <= 'Z') || (buff[i] >= 'a' && buff[i] <= 'z') || buff[i] == '_')
+            output.append(1, buff[i]);
+        else
+            break;
+        *use_char = *use_char + 1;
+    }
+    *use_char = *use_char + 1;
 }

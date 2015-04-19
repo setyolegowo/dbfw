@@ -46,6 +46,8 @@ class Connection
         std::string db_user;
         std::string db_type;
         std::string db_user_ip;
+        std::string sql_action;
+        std::string sql_tabel;
         // DBPermObj * db;
         DBProxyType dbType;
         std::string original_query;

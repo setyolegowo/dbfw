@@ -27,8 +27,9 @@ struct query_risk {
   int has_or;
 };
 
-bool query_parse(struct query_risk * q_risk, SQLPatterns * patterns, const char * q);
+bool query_parse(struct query_risk * q_risk, SQLPatterns * patterns, const char * q, std::string& action, std::string& resource);
 
+void clb_found_action(const char * s);
 void clb_found_or_token();
 void clb_found_union_token();
 void clb_found_empty_pwd();

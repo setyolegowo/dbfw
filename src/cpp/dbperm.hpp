@@ -18,17 +18,21 @@
 class DBPerm
 {
 public:
+	bool error_result;
+	std::map<std::string, unsigned char> mask_map;
+
     DBPerm();
     virtual ~DBPerm();
 
     bool addAttr(std::string& attr);
     bool checkout(std::string& subject, std::string& action, std::string& uri);
     bool oneCheckPermission(std::string& subject, std::string& action, std::string& uri);
+    int getResult();
 
 private:
-    std::map<std::string, unsigned char> mask_map;
     std::vector<std::string> attr_list;
     bool _connect(Buffer& buff);
+    bool _parsingResult(const char *, int size);
 
 };
 

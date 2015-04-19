@@ -9,6 +9,7 @@
 #include <string.h>
 #include "expression.hpp"
 #include "parser.hpp"
+#include "../log.hpp"
 
 #ifndef PARSER_DEBUG
 #include "../config.hpp"
@@ -24,6 +25,8 @@ static bool free_expressions();
 static query_risk risk = {0};
 static query_risk * p_risk = &risk;
 static SQLPatterns * patterns = NULL;
+static std::string _action;
+static std::string _resource;
 
 #ifdef PARSER_DEBUG
 // ind debug mode we have our own main function
@@ -56,8 +59,10 @@ int main()
 }
 #endif
 
-bool query_parse(struct query_risk * q_risk, SQLPatterns * sql_patterns, const char * q)
+bool query_parse(struct query_risk * q_risk, SQLPatterns * sql_patterns, const char * q, std::string& action, std::string& resource)
 {
+    _action = "";
+    _resource = "";
     p_risk = q_risk;
     //bzero(q_risk, sizeof(struct query_risk));
     memset(q_risk, 0, sizeof(struct query_risk));
@@ -65,7 +70,18 @@ bool query_parse(struct query_risk * q_risk, SQLPatterns * sql_patterns, const c
     scan_buffer(q);
     free_sql_strings();
     free_expressions();
+    action = _action;
+    resource = _resource;
     return true;
+}
+
+void clb_found_action(const char * s)
+{
+    if(s == NULL)
+        return;
+    if(s[0] == 0)
+        return;
+    _action.assign(s);
 }
 
 void clb_found_or_token()
@@ -93,6 +109,9 @@ void clb_found_table(const SQLString * s)
     if (s->Length() == 0)
         return;
 #ifndef PARSER_DEBUG
+    if(_resource.size() > 0)
+        _resource += " ";
+    _resource += s->str_value;
     DBFWConfig * conf = DBFWConfig::getInstance();
     if (patterns != NULL && conf->re_s_tables >= 0 ) {
         if (patterns->Match( SQL_S_TABLES, s->str_value ) )
