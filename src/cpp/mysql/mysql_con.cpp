@@ -9,7 +9,8 @@
 
 #include "../normalization.hpp"
 #include "../config.hpp"
-// #include "../dbperm.hpp"
+#include "../dbperm.hpp"
+#include "../misc.hpp"
 // #include "../dbmap.hpp"
 
 static void getHeaderSQLFromCol(const unsigned char * /* data */, int /* col_num */, std::string & /* output */);
@@ -432,7 +433,13 @@ bool MySQLConnection::parseResponse(std::string & response)
     size_t start = 0;
     int state;
     int number_of_fields;
+    bool no_table;
     std::string buffer;
+    std::string tmp;
+    std::map<std::string, std::string> map_tmp;
+    std::map<std::string, int> map_field;
+    std::map<int, int> map_perm;
+    std::map<std::string, std::string>::iterator it_map;
     // size_t header_size;
     if (full_size < 5) {
        logEvent(NET_DEBUG, "received %d bytes of response\n", full_size);
@@ -446,26 +453,72 @@ bool MySQLConnection::parseResponse(std::string & response)
     // unsigned int type = data[4];
 
     logEvent(SQL_DEBUG, "server packet   : %d\n", packet_id);
-    logEvent(SQL_DEBUG, "last command id : %d\n", lastCommandId);
+    // logEvent(SQL_DEBUG, "last command id : %d\n", lastCommandId);
     if (!((start_response && data[4] == MYSQL_SRV_ERROR) || lastCommandId == MYSQL_DB || first_request || SecondPacket)) { //-V112
         number_of_fields = data[4];
         state = 0;
-        fields.clear();
         logEvent(V_DEBUG, "Number of fields: %d\n", number_of_fields);
         while((start + response_size) <= full_size) {
             if(start > 0 && lastCommandId == MYSQL_QUERY) {
                 if(state < number_of_fields) {
+                    no_table = false;
+                    getHeaderSQLFromCol(data + start, 5, buffer);
+                    // logEvent(V_DEBUG, "Data on Column 5: %s\n", buffer.c_str());
+                    if(buffer.size() > 0) {
+                        tmp.assign(buffer);
+                        it_map = map_tmp.find(buffer);
+                        while(it_map == map_tmp.end()) {
+                            map_tmp.insert(std::pair<std::string, std::string>(buffer, ""));
+                            it_map = map_tmp.find(buffer);
+                        }
+                    } else 
+                        no_table = true;
                     getHeaderSQLFromCol(data + start, 7, buffer);
-                    fields.push_back(buffer);
-                    logEvent(V_DEBUG, "Data on Column 7: %s\n", buffer.c_str());
+                    // logEvent(V_DEBUG, "Data on Column 7: %s\n", buffer.c_str());
+                    if(!no_table && buffer.size() > 0) {
+                        tmp.append(":");
+                        tmp.append(buffer);
+                        map_field.insert(std::pair<std::string, int>(tmp, state));
+                        map_perm.insert(std::pair<int, int>(state, 0));
+                        if(it_map->second.size() > 0)
+                            it_map->second.append(" ");
+                        it_map->second.append(buffer);
+                    }
                     state++;
                 } else {
+                    if(state == number_of_fields) {
+                        if(sql_action == "select") {
+                            for(it_map = map_tmp.begin(); it_map != map_tmp.end(); ++it_map) {
+                                DBPerm perm;
+                                perm.addAttr(it_map->second);
+                                std::string uri_resource = itoa(iProxyId);
+                                uri_resource.append("/");
+                                uri_resource.append(db_name);
+                                uri_resource.append("/");
+                                uri_resource.append(it_map->first);
+                                perm.checkout(db_user, sql_action, uri_resource);
+                                for(std::map<std::string, unsigned char>::iterator it = perm.mask_map.begin();
+                                    it != perm.mask_map.end(); ++it) {
+                                    tmp.assign(it_map->first);
+                                    tmp.append(":");
+                                    tmp.append(it->first);
+                                    std::map<std::string, int>::iterator _it = map_field.find(tmp);
+                                    if(_it != map_field.end()) {
+                                        map_perm[_it->second] = (int) it->second;
+                                    }
+                                }
+                            }
+                        }
+                        state++;
+                    }
                     if((data[start+2]<<16 | data[start+1] << 8 | data[start]) <= 5) {
-                        logEvent(V_DEBUG, "EOF MARKER: %d\n", (int) data[start + 4]);
+                        // logEvent(V_DEBUG, "EOF MARKER: %d\n", (int) data[start + 4]);
                     } else {
                         getBodySQLFromCol(data + start, number_of_fields, buffer);
-                        if(fields[1] == "nama") maskResultSetFromCol(data + start, 2, start, response_in);
-                        logEvent(V_DEBUG, "Data on field: %s\n", buffer.c_str());
+                        for(int i = 0; i < number_of_fields; i++) {
+                            if(map_perm[i] == 1) maskResultSetFromCol(data + start, 1 + i, start, response_in);
+                        }
+                        // logEvent(V_DEBUG, "Data on field: %s\n", buffer.c_str());
                         // logHex(V_DEBUG, data + start, (data[start+2]<<16 | data[start+1] << 8 | data[start]) + 4);
                     }
                 }
@@ -649,7 +702,7 @@ void getBodySQLFromCol(const unsigned char * data, int num_col, std::string & ou
 
 void maskResultSetFromCol(const unsigned char * data, int col_num, int start, Buffer & output)
 {
-    logEvent(VV_DEBUG, "maskResultSetFromCol fired\n");
+    // logEvent(VV_DEBUG, "maskResultSetFromCol fired\n");
     int offset = 4;
     int length = (data[2]<<16 | data[1] << 8 | data[0]) + 4;
     // char packet_id = data[3];

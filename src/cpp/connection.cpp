@@ -29,7 +29,7 @@ Connection::Connection(int proxy_id)
     db_user        = "";
     db_type        = "";
     db_user_ip     = "";
-	sql_tabel      = "";
+    sql_tabel      = "";
     sql_action     = "";
     SecondPacket   = false;
     first_response = true;
@@ -90,33 +90,37 @@ bool Connection::check_query(std::string & query)
 
  //    if ( (ret = checkBlacklist(pattern, reason)) == true)
  //    {
-    //  logEvent(SQL_DEBUG, "FORBIDEN     : %s\n", pattern.c_str());
+ //  logEvent(SQL_DEBUG, "FORBIDEN     : %s\n", pattern.c_str());
  //    }
  //    // check if we find anything interesting
     risk = calculateRisk(original_query, reason);
     logEvent(SQL_DEBUG, "RISK         : %d\n", risk);
 
     if(sql_action == "select") {
-	    DBPerm perm;
-	    perm.addAttr(sql_tabel);
-	    std::string uri_resource = iProxyId + "/" + db_name;
-	    perm.checkout(db_user, sql_action, uri_resource);
-	    if(perm.error_result) {
-	    	logEvent(DEBUG, "Permission error\n");
-	    } else {
-	    	if(perm.getResult() > 0) {
-	    		if(perm.mask_map.size() == 1) {
+        DBPerm perm;
+        perm.addAttr(sql_tabel);
+        std::string uri_resource = itoa(iProxyId);
+        uri_resource.append("/");
+        uri_resource.append(db_name);
+        perm.checkout(db_user, sql_action, uri_resource);
+        if(perm.error_result) {
+            logEvent(DEBUG, "Permission error\n");
+        } else {
+            if(perm.getResult() > 0) {
+                if(perm.mask_map.size() == 1) {
                     if(perm.getResult() == 1) {
-    	    			logEvent(DEBUG, "Permission denied\n");
-    	    			return false;
+                        logEvent(VV_DEBUG, "Permission denied\n");
+                        return false;
                     } else {
-                        logEvent(DEBUG, "Else permission\n");
+                        logEvent(VV_DEBUG, "Else permission\n");
                     }
-	    		} else
-	    			logEvent(DEBUG, "Unknown permission\n");
-	    	}
-	    }
-	}
+                } else
+                    logEvent(VV_DEBUG, "Unknown permission\n");
+            } else {
+                logEvent(VV_DEBUG, "Permission permit\n");
+            }
+        }
+    }
 
     if (risk >= conf->re_block_level) {
         logAlert(iProxyId, db_name, db_user, db_user_ip, original_query,

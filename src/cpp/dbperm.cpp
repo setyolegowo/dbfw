@@ -121,7 +121,6 @@ bool DBPerm::_connect(Buffer& buff)
 
     if((n = read(sockfd, _buff, sizeof(_buff)-1)) > 0) {
         _buff[n] = 0;
-        logHex(VV_DEBUG, (unsigned char*) _buff, n);
         _parsingResult(_buff, n);
     } else if(n < 0) {
         logEvent(NET_DEBUG, "Socket %d read error, errno=%d in DBPerm\n", sockfd, errno);

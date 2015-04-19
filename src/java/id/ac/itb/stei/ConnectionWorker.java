@@ -42,6 +42,7 @@ public class ConnectionWorker implements Runnable {
                 String message = new String(buffer).substring(0, charsRead);
                 String[] msg = message.split(" ");
                 log.debug("msg :" + message);
+                System.out.println("msg : " + message);
                 if(msg.length < 3)
                     error = true;
                 else {
@@ -55,6 +56,7 @@ public class ConnectionWorker implements Runnable {
                     dbfw.run();
                     try (OutputStream output = clientSocket.getOutputStream()) {
                         output.write(("1 " + dbfw.getResult()).getBytes());
+                        System.out.println("msg : " + dbfw.getResult());
                     }
                 } else {
                     try (OutputStream output = clientSocket.getOutputStream()) {

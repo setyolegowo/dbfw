@@ -8,7 +8,7 @@
 #ifndef DBFW_MYSQL_CONNECTION_HPP
 #define DBFW_MYSQL_CONNECTION_HPP
 
-#include <vector>
+#include <map>
 
 #include "../connection.hpp"
 #include "../log.hpp"
@@ -93,9 +93,6 @@ class MySQLConnection: public Connection
         bool longResponseData;
         MySQLType lastCommandId;
         bool start_response;
-
-        /* RESPONSE */
-        std::vector<std::string> fields;
 
     private:
         bool ParseRequestPacket  (const unsigned char *, size_t &, bool & );
