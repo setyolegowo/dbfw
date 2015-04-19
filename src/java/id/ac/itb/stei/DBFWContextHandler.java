@@ -8,6 +8,7 @@ package id.ac.itb.stei;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,7 +39,8 @@ import org.xml.sax.SAXException;
  */
 public final class DBFWContextHandler {
 
-    private Log log = LogFactory.getLog(DBFWContextHandler.class);
+    private final Log log = LogFactory.getLog(DBFWContextHandler.class);
+    private final URI uri_column = URI.create("urn:oasis:names:tc:xacml:3.0:attribute-category:column");
     private Balana balana;
     private String username;
     private String action;
@@ -125,26 +127,26 @@ public final class DBFWContextHandler {
                 ResponseCtx responseCtx = ResponseCtx.getInstance(getXacmlResponse(response));
                 Set<AbstractResult> results  = responseCtx.getResults();
                 for(AbstractResult _result : results){
-                    if(AbstractResult.DECISION_PERMIT == _result.getDecision()){
-                        this.result = "ok";
-                        Set<Attributes> attributesSet = ((Result)_result).getAttributes();
-                        for(Attributes attributes : attributesSet){
+                    Set<Attributes> attributesSet = ((Result)_result).getAttributes();
+                    for(Attributes attributes : attributesSet){
+                        if(attributes.getCategory().equals(uri_column)) {
                             for(Attribute attribute : attributes.getAttributes()){
-                                resultColumns.add(attribute.getValue().encode());
+                                resultColumns.add(_result.getDecision() + ":" + attribute.getValue().encode());
                             }
                         }
-                    } else if(AbstractResult.DECISION_INDETERMINATE == _result.getDecision()){
-                        this.result = "ok";
-                    } else {
-                        this.result = "no";
                     }
                 }
             } catch (ParsingException e) {
                 log.error(e);
             }
-
+            
+            this.result = "" + resultColumns.size();
+            for(String row : resultColumns) {
+                this.result += " " + row;
+            }
+            this.result += "\n";
         } else {
-            log.error("User name, action, and table resource can not be empty");
+            log.warn("User name, action, and table resource can not be empty");
         }
     }
     
@@ -186,13 +188,13 @@ public final class DBFWContextHandler {
         try {
             doc = dbf.newDocumentBuilder().parse(inputStream);
         } catch (ParserConfigurationException | SAXException | IOException e) {
-            log.error("DOM of request element can not be created from String");
+            log.error("DOM of request element can not be created from String\n" + e);
             return null;
         } finally {
             try {
                 inputStream.close();
             } catch (IOException e) {
-               log.error("Error in closing input stream of XACML response");
+               log.error("Error in closing input stream of XACML response\n" + e);
             }
         }
         return doc.getDocumentElement();
@@ -202,38 +204,40 @@ public final class DBFWContextHandler {
 
         try{
             // using file based policy repository. so set the policy location as system property
-            String policyLocation = (new File(".")).getCanonicalPath() + File.separator + "conf\\resources";
+            String policyLocation = (new File(".")).getCanonicalPath() + File.separator + "conf" + File.separator + "resources";
+            log.debug(policyLocation);
+            System.out.println(policyLocation);
             System.setProperty(FileBasedPolicyFinderModule.POLICY_DIR_PROPERTY, policyLocation);
         } catch (IOException e) {
-            log.error("Can not locate policy repository");
+            log.error("Can not locate policy repository\n" + e);
         }
         // create default instance of Balana
         balana = Balana.getInstance();
     }
     
     public String createXACMLRequest(){
-        String retval = "<Request xmlns=\"urn:oasis:names:tc:xacml:3.0:core:schema:wd-17\" CombinedDecision=\"false\" ReturnPolicyIdList=\"false\">\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:action\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:action:action-id\" IncludeInResult=\"false\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">"+ action +"</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:1.0:subject-category:access-subject\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:subject:subject-id\" IncludeInResult=\"false\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">"+ username +"</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n" +
-                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:resource\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">" + tableResource + "</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n";
+        String retval = "<Request xmlns=\"urn:oasis:names:tc:xacml:3.0:core:schema:wd-17\" CombinedDecision=\"false\" ReturnPolicyIdList=\"false\">" +
+                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:action\">" +
+                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:action:action-id\" IncludeInResult=\"false\">" +
+                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">"+ action +"</AttributeValue>" +
+                "</Attribute>" +
+                "</Attributes>" +
+                "<Attributes Category=\"urn:oasis:names:tc:xacml:1.0:subject-category:access-subject\">" +
+                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:subject:subject-id\" IncludeInResult=\"false\">" +
+                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">"+ username +"</AttributeValue>" +
+                "</Attribute>" +
+                "</Attributes>" +
+                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:resource\">" +
+                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">" +
+                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">" + tableResource + "</AttributeValue>" +
+                "</Attribute>" +
+                "</Attributes>";
         for (String row : attrResource) {
-            retval += "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:column\">\n" +
-                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">\n" +
-                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">" + row + "</AttributeValue>\n" +
-                "</Attribute>\n" +
-                "</Attributes>\n";
+            retval += "<Attributes Category=\"" + uri_column + "\">" +
+                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">" +
+                "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">" + row.trim() + "</AttributeValue>" +
+                "</Attribute>" +
+                "</Attributes>";
         }
         retval += "</Request>";
         return retval;

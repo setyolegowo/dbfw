@@ -3,7 +3,7 @@
       <AnyOf>
          <AllOf>
             <Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-regexp-match">
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">localhost:3306/contoh/tabel1</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">localhost:3305/contoh/tabel1</AttributeValue>
                <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
             </Match>
             <Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
@@ -41,7 +41,7 @@
             <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-bag">
                <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">nama</AttributeValue>
             </Apply>
-            <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:image" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
+            <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:column" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
          </Apply>
       </Condition>
    </Rule>
@@ -67,7 +67,7 @@
             <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-bag">
                <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">id</AttributeValue>
             </Apply>
-            <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:image" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
+            <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:column" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
          </Apply>
       </Condition>
    </Rule>
@@ -87,7 +87,7 @@
             <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-bag">
                <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">nomor</AttributeValue>
             </Apply>
-            <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:image" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
+            <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:column" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
          </Apply>
       </Condition>
    </Rule>

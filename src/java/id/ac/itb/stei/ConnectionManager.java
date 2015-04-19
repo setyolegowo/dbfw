@@ -19,7 +19,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class ConnectionManager implements Runnable {
     
-    private Log log = LogFactory.getLog(ConnectionManager.class);
+    private final Log log = LogFactory.getLog(ConnectionManager.class);
     protected int          serverPort    = 6000;
     protected ServerSocket serverSocket  = null;
     protected boolean      isStopped     = false;

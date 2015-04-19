@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  *
@@ -17,6 +19,7 @@ import java.net.Socket;
  */
 public class ConnectionWorker implements Runnable {
     
+    private final Log log = LogFactory.getLog(ConnectionWorker.class);
     protected char[] buffer = new char[2048];
     protected Socket clientSocket = null;
     protected String serverText   = null;
@@ -35,19 +38,18 @@ public class ConnectionWorker implements Runnable {
             );
             if((charsRead = in.read(buffer)) >= 0) {
                 boolean error = false;
+                DBFWContextHandler dbfw = null;
                 String message = new String(buffer).substring(0, charsRead);
                 String[] msg = message.split(" ");
-                System.out.println("msg :" + message);
-                DBFWContextHandler dbfw = new DBFWContextHandler(msg[1],
-                        msg[2], msg[3]);
-                if(msg[0].equalsIgnoreCase("1")) {
-                    // nothing
-                } else if(msg[0].equalsIgnoreCase("2")) {
-                    for(int i=4; i < msg.length; i++){
+                log.debug("msg :" + message);
+                if(msg.length < 3)
+                    error = true;
+                else {
+                    dbfw = new DBFWContextHandler(msg[0], msg[1], msg[2]);
+                    for(int i=3; i < msg.length; i++){
                         dbfw.addColumn(msg[i]);
                     }
-                } else
-                    error = true;
+                }
                 
                 if(!error){
                     dbfw.run();
@@ -61,6 +63,7 @@ public class ConnectionWorker implements Runnable {
                 }
             }
         } catch (IOException e) {
+            log.error(e);
         }
     }
     
