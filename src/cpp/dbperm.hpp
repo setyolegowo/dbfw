@@ -31,7 +31,7 @@ public:
 
 private:
     std::vector<std::string> attr_list;
-    bool _connect(Buffer& buff);
+    bool _connect(std::string& buff);
     bool _parsingResult(const char *, int size);
 
 };

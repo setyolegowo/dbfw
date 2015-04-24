@@ -15,7 +15,9 @@
 // #include <stdio.h>
 // #include <string.h>
 // #include <stdlib.h>
+#include <map>
 #include <unistd.h>
+#include <time.h>
 #include <errno.h>
 #include <arpa/inet.h>
 
@@ -23,8 +25,14 @@
 #include "config.hpp"
 #include "log.hpp"
 
+#define MAX_INTERVAL 600
+
 static int _parseToInt(int start, const char * buff, int size, int * use_char);
 static void _parseToString(int start, const char * buff, int size, int * use_char, std::string& output);
+static int _count = 1;
+static std::map<std::string, int> _perm_static;
+static std::map<int, time_t> _perm_static_time;
+static std::map<int, std::string> _perm_static_result;
 
 DBPerm::DBPerm()
 {
@@ -47,7 +55,7 @@ bool DBPerm::addAttr(std::string& attr)
 
 bool DBPerm::checkout(std::string& subject, std::string& action, std::string& uri)
 {
-    Buffer buf;
+    std::string buf;
     std::string temp = " ";
     buf.append(subject);
     buf.append(temp.c_str(), 1);
@@ -58,22 +66,48 @@ bool DBPerm::checkout(std::string& subject, std::string& action, std::string& ur
         buf.append(temp.c_str(), 1);
         buf.append(*it);
     }
-    return _connect(buf);
+    std::map<std::string, int>::iterator it = _perm_static.find(buf);
+    if(it == _perm_static.end()) {
+        return _connect(buf);
+    } else {
+        std::map<int, time_t>::iterator it2 = _perm_static_time.find(it->second);
+        time_t now = time(NULL);
+        double diff_second = difftime(now, it2->second);
+        logEvent(V_DEBUG, "[%d] Different time: %f\n", it->second, diff_second);
+        if(diff_second < MAX_INTERVAL) {
+            std::map<int, std::string>::iterator it3 = _perm_static_result.find(it->second);
+            return _parsingResult(it3->second.c_str(), it3->second.size());
+        } else
+            return _connect(buf);
+    }
 }
 
 bool DBPerm::oneCheckPermission(std::string& subject, std::string& action, std::string& uri)
 {
-    Buffer buf;
+    std::string buf;
     std::string temp = " ";
     buf.append(subject);
     buf.append(temp.c_str(), 1);
     buf.append(action);
     buf.append(temp.c_str(), 1);
     buf.append(uri);
-    return _connect(buf);
+    std::map<std::string, int>::iterator it = _perm_static.find(buf);
+    if(it == _perm_static.end()) {
+        return _connect(buf);
+    } else {
+        std::map<int, time_t>::iterator it2 = _perm_static_time.find(it->second);
+        time_t now = time(NULL);
+        double diff_second = difftime(now, it2->second);
+        logEvent(V_DEBUG, "[%d] Different time: %f\n", it->second, diff_second);
+        if(diff_second < MAX_INTERVAL) {
+            std::map<int, std::string>::iterator it3 = _perm_static_result.find(it->second);
+            return _parsingResult(it3->second.c_str(), it3->second.size());
+        } else
+            return _connect(buf);
+    }
 }
 
-bool DBPerm::_connect(Buffer& buff)
+bool DBPerm::_connect(std::string& buff)
 {
     DBFWConfig * cfg = DBFWConfig::getInstance();
     int sockfd = 0, n = 0;
@@ -111,7 +145,7 @@ bool DBPerm::_connect(Buffer& buff)
         }
     }
 
-    if ((n = write(sockfd, buff.raw(), buff.size())) <= 0) {
+    if ((n = write(sockfd, buff.c_str(), buff.size())) <= 0) {
         logEvent(NET_DEBUG, "[%d] Socket write error %d in DBPerm\n", sockfd, errno);
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS)
             n = 0;
@@ -121,6 +155,20 @@ bool DBPerm::_connect(Buffer& buff)
 
     if((n = read(sockfd, _buff, sizeof(_buff)-1)) > 0) {
         _buff[n] = 0;
+        std::map<std::string, int>::iterator it = _perm_static.find(buff);
+        time_t now = time(NULL);
+        if(it == _perm_static.end()) {
+            _perm_static.insert(std::pair<std::string, int>(buff, _count));
+            _perm_static_time.insert(std::pair<int, time_t>(_count, now));
+            std::string tmp_map; tmp_map.assign(_buff, n);
+            _perm_static_result.insert(std::pair<int, std::string>(_count, tmp_map));
+            _count++;
+        } else {
+            std::map<int, time_t>::iterator it2 = _perm_static_time.find(it->second);
+            it2->second = now;
+            std::map<int, std::string>::iterator it3 = _perm_static_result.find(it->second);
+            it3->second.assign(_buff, n);
+        }
         _parsingResult(_buff, n);
     } else if(n < 0) {
         logEvent(NET_DEBUG, "Socket %d read error, errno=%d in DBPerm\n", sockfd, errno);
@@ -140,6 +188,15 @@ int DBPerm::getResult()
 {
     if(mask_map.size() == 1) {
         return mask_map.begin()->second;
+    } else if(mask_map.size() > 1) {
+        int result = 2;
+        std::map<std::string, unsigned char>::iterator it = mask_map.begin();
+        for(; it != mask_map.end() && result != 1; ++it) {
+            logEvent(VV_DEBUG, "RESULT EACH        %d\n", it->second);
+            result = it->second;
+        }
+        logEvent(VV_DEBUG, "RESULT PERMISSION %d\n", result);
+        return result;
     }
     return 2;
 }

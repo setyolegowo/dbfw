@@ -437,7 +437,7 @@ bool MySQLConnection::parseResponse(std::string & response)
     std::string buffer;
     std::string tmp;
     std::map<std::string, std::string> map_tmp;
-    std::map<std::string, int> map_field;
+    std::multimap<std::string, int> map_field;
     std::map<int, int> map_perm;
     std::map<std::string, std::string>::iterator it_map;
     // size_t header_size;
@@ -476,8 +476,7 @@ bool MySQLConnection::parseResponse(std::string & response)
                     getHeaderSQLFromCol(data + start, 7, buffer);
                     // logEvent(V_DEBUG, "Data on Column 7: %s\n", buffer.c_str());
                     if(!no_table && buffer.size() > 0) {
-                        tmp.append(":");
-                        tmp.append(buffer);
+                        tmp.append(":"); tmp.append(buffer);
                         map_field.insert(std::pair<std::string, int>(tmp, state));
                         map_perm.insert(std::pair<int, int>(state, 0));
                         if(it_map->second.size() > 0)
@@ -492,18 +491,16 @@ bool MySQLConnection::parseResponse(std::string & response)
                                 DBPerm perm;
                                 perm.addAttr(it_map->second);
                                 std::string uri_resource = itoa(iProxyId);
-                                uri_resource.append("/");
-                                uri_resource.append(db_name);
-                                uri_resource.append("/");
-                                uri_resource.append(it_map->first);
+                                uri_resource.append("/"); uri_resource.append(db_name);
+                                uri_resource.append("/"); uri_resource.append(it_map->first);
                                 perm.checkout(db_user, sql_action, uri_resource);
                                 for(std::map<std::string, unsigned char>::iterator it = perm.mask_map.begin();
-                                    it != perm.mask_map.end(); ++it) {
-                                    tmp.assign(it_map->first);
-                                    tmp.append(":");
-                                    tmp.append(it->first);
-                                    std::map<std::string, int>::iterator _it = map_field.find(tmp);
-                                    if(_it != map_field.end()) {
+                                        it != perm.mask_map.end(); ++it) {
+                                    tmp.assign(it_map->first); tmp.append(":"); tmp.append(it->first);
+                                    std::multimap<std::string, int>::iterator _it;
+                                    for (_it = map_field.equal_range(tmp).first;
+                                        _it != map_field.equal_range(tmp).second; ++_it)
+                                    {
                                         map_perm[_it->second] = (int) it->second;
                                     }
                                 }

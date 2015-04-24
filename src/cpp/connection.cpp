@@ -94,7 +94,6 @@ bool Connection::check_query(std::string & query)
  //    }
  //    // check if we find anything interesting
     risk = calculateRisk(original_query, reason);
-    logEvent(SQL_DEBUG, "RISK         : %d\n", risk);
 
     if(sql_action == "select") {
         DBPerm perm;
@@ -122,6 +121,7 @@ bool Connection::check_query(std::string & query)
         }
     }
 
+    logEvent(SQL_DEBUG, "RISK         : %d\n", risk);
     if (risk >= conf->re_block_level) {
         logAlert(iProxyId, db_name, db_user, db_user_ip, original_query,
             query, reason, risk, 2);
