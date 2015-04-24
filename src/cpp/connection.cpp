@@ -95,29 +95,24 @@ bool Connection::check_query(std::string & query)
  //    // check if we find anything interesting
     risk = calculateRisk(original_query, reason);
 
-    if(sql_action == "select") {
-        DBPerm perm;
-        perm.addAttr(sql_tabel);
-        std::string uri_resource = itoa(iProxyId);
-        uri_resource.append("/");
-        uri_resource.append(db_name);
-        perm.checkout(db_user, sql_action, uri_resource);
-        if(perm.error_result) {
-            logEvent(DEBUG, "Permission error\n");
-        } else {
-            if(perm.getResult() > 0) {
-                if(perm.mask_map.size() == 1) {
-                    if(perm.getResult() == 1) {
-                        logEvent(VV_DEBUG, "Permission denied\n");
-                        return false;
-                    } else {
-                        logEvent(VV_DEBUG, "Else permission\n");
-                    }
-                } else
-                    logEvent(VV_DEBUG, "Unknown permission\n");
+    DBPerm perm;
+    perm.addAttr(sql_tabel);
+    std::string uri_resource = itoa(iProxyId);
+    uri_resource.append("/");
+    uri_resource.append(db_name);
+    perm.checkout(db_user, sql_action, uri_resource);
+    if(perm.error_result) {
+        logEvent(DEBUG, "Permission error\n");
+    } else {
+        if(perm.getResult() > 0) {
+            if(perm.getResult() == 1) {
+                logEvent(VV_DEBUG, "Permission denied\n");
+                return false;
             } else {
-                logEvent(VV_DEBUG, "Permission permit\n");
+                logEvent(VV_DEBUG, "Else permission\n");
             }
+        } else {
+            logEvent(VV_DEBUG, "Permission permit\n");
         }
     }
 

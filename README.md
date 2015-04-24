@@ -7,7 +7,9 @@ Aplikasi untuk Tugas Akhir Sarjana Teknik Informatika ITB
 
 # How to compile
 
-## Package
+There is 2 packages: CPP and Java
+
+## Package CPP
 
 In order to compile this application you need the following packages:
 
@@ -29,10 +31,16 @@ For Ubuntu and Debian I had to install:
 7. g++
 8. gcc
 
+## Package Java
+
+This program using XACML for managing access control. So, the Java program need `Balana` package.
+
 ## Compile
 
-Just execute `make` within this directory
+For CPP, you just execute `make` within this directory. And for Java, please use Netbeans IDE for compiling this project to Jar achive.
 
 # How to run
 
 Before run the database firewall, you should create blank file `/var/log/dbfw.log`. That URI is written in configuration file `dbfw.conf`. And then you run with `./dbfw -p <configuration folder>`.
+
+Before run java application, first place the jar file in this directory or root of project. Then you run with `java -jar dbfw.jar`.

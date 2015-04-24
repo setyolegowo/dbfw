@@ -192,10 +192,8 @@ int DBPerm::getResult()
         int result = 2;
         std::map<std::string, unsigned char>::iterator it = mask_map.begin();
         for(; it != mask_map.end() && result != 1; ++it) {
-            logEvent(VV_DEBUG, "RESULT EACH        %d\n", it->second);
             result = it->second;
         }
-        logEvent(VV_DEBUG, "RESULT PERMISSION %d\n", result);
         return result;
     }
     return 2;
@@ -246,6 +244,8 @@ void _parseToString(int start, const char * buff, int size, int * use_char, std:
     output = "";
     for(int i = start; i < size; i++) {
         if((buff[i] >= 'A' && buff[i] <= 'Z') || (buff[i] >= 'a' && buff[i] <= 'z') || buff[i] == '_')
+            output.append(1, buff[i]);
+        else if(i > start && (buff[i] >= '0' && buff[i] <= '9'))
             output.append(1, buff[i]);
         else
             break;
