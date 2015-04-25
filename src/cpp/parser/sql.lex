@@ -104,7 +104,7 @@ union       {clb_found_union_token(); return UNION;}
 from        return FROM;
 where       return WHERE;
 like        return LIKE;
-rlike       return LIKE;
+rlike       return REGEXP;
 into        return INTO;
 sounds[ \t\v\f\r\n\xA0]+like return LIKE;
 

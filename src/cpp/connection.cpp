@@ -94,6 +94,9 @@ bool Connection::check_query(std::string & query)
  //    }
  //    // check if we find anything interesting
     risk = calculateRisk(original_query, reason);
+    if(sql_action.size() == 0) {
+        sql_action.assign("unknown");
+    }
 
     DBPerm perm;
     perm.addAttr(sql_tabel);
@@ -138,45 +141,46 @@ unsigned int Connection::calculateRisk(std::string & query, std::string & reason
     struct query_risk risk;
     query_parse(&risk, getSQLPatterns(), query.c_str(), sql_action, sql_tabel);
 
-    if (conf->re_sql_comments > 0 && risk.has_comment == 1) {
+    if (conf->re_sql_comments > 0 && risk.has_comment > 0) {
         reason += "Query has comments\n";
-        logEvent(DEBUG, "Query has comments\n");
-        ret += conf->re_sql_comments;
+        logEvent(V_DEBUG, "Query has comments (%d)\n", risk.has_comment);
+        ret += (conf->re_sql_comments*risk.has_comment);
     }
-    if (conf->re_s_tables > 0 && risk.has_s_table == 1) {
+    if (conf->re_s_tables > 0 && risk.has_s_table > 0) {
         reason += "Query uses sensitive tables\n";
-        logEvent(DEBUG, "Query uses sensitive tables\n");
-        ret += conf->re_s_tables;
+        logEvent(V_DEBUG, "Query uses sensitive tables (%d)\n", risk.has_s_table);
+        ret += (conf->re_s_tables*risk.has_s_table);
     }
-    if (conf->re_multiple_queries > 0 && risk.has_separator == 1) {
+    if (conf->re_multiple_queries > 0 && risk.has_separator > 0) {
         reason += "Multiple queries found\n";
-        logEvent(DEBUG, "Multiple queries found\n");
-        ret += conf->re_multiple_queries;
+        logEvent(V_DEBUG, "Multiple queries found (%d)\n", risk.has_separator);
+        ret += (conf->re_multiple_queries*risk.has_separator);
     }
-    if (conf->re_or_token > 0 && risk.has_or == 1) {
+    if (conf->re_or_token > 0 && risk.has_or > 0) {
         reason += "Query has 'or' token\n";
-        logEvent(DEBUG, "Query has 'or' token\n");
-        ret += conf->re_or_token;
+        logEvent(V_DEBUG, "Query has 'or' token (%d)\n", risk.has_or);
+        ret += (conf->re_or_token*risk.has_or);
     }
-    if (conf->re_union_token > 0 && risk.has_union == 1) {
+    if (conf->re_union_token > 0 && risk.has_union > 0) {
         reason += "Query has 'union' token\n";
-        logEvent(DEBUG, "Query has 'union' token\n");
-        ret += conf->re_union_token;
+        logEvent(V_DEBUG, "Query has 'union' token (%d)\n", risk.has_union);
+        ret += (conf->re_union_token*risk.has_union);
     }
-    if (conf->re_var_cmp_var > 0 && risk.has_tautology == 1) {
+    if (conf->re_var_cmp_var > 0 && risk.has_tautology > 0) {
         reason += "True expression detected (SQL tautology)\n";
-        logEvent(DEBUG, "True expression detected (SQL tautology)\n");
-        ret += conf->re_var_cmp_var;
+        logEvent(V_DEBUG, "True expression detected (SQL tautology) (%d)\n", risk.has_tautology);
+        ret += (conf->re_var_cmp_var*risk.has_tautology);
     }
-    if (conf->re_empty_password > 0 && risk.has_empty_pwd == 1) {
+    if (conf->re_empty_password > 0 && risk.has_empty_pwd > 0) {
         reason += "Query has empty password expression\n";
-        logEvent(DEBUG, "Query has empty password expression\n");
-        ret += conf->re_empty_password;
+        logEvent(V_DEBUG, "Query has empty password expression (%d)\n", risk.has_empty_pwd);
+        ret += (conf->re_empty_password*risk.has_empty_pwd);
     }
-    if (conf->re_bruteforce > 0 && risk.has_bruteforce_function == 1) {
+    if (conf->re_bruteforce > 0 && risk.has_bruteforce_function > 0) {
         reason += "Query has SQL fuction that can be used to bruteforce db contents\n";
-        logEvent(DEBUG, "Query has SQL fuction that can be used to bruteforce db contents\n");
-        ret += conf->re_bruteforce;
+        logEvent(V_DEBUG, "Query has SQL fuction that can be used to bruteforce db contents (%d)\n",
+            risk.has_bruteforce_function);
+        ret += (conf->re_bruteforce*risk.has_bruteforce_function);
     }
 
     return ret;

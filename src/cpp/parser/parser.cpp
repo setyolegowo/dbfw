@@ -22,6 +22,8 @@ int scan_buffer(const char * data);
 static bool free_sql_strings();
 static bool free_expressions();
 
+static std::string string_elt = "ELT";
+static std::string string_sleep = "SLEEP";
 static query_risk risk = {0};
 static query_risk * p_risk = &risk;
 static SQLPatterns * patterns = NULL;
@@ -86,22 +88,34 @@ void clb_found_action(const char * s)
 
 void clb_found_or_token()
 {
-    p_risk->has_or = 1;  
+    if(p_risk->has_or > 0)
+        p_risk->has_or++;
+    else
+        p_risk->has_or = 1;
 }
 
 void clb_found_union_token()
 {
-    p_risk->has_union = 1;
+    if(p_risk->has_union > 0)
+        p_risk->has_union++;
+    else
+        p_risk->has_union = 1;
 }
 
 void clb_found_empty_pwd()
 {
-    p_risk->has_empty_pwd = 1;
+    if(p_risk->has_empty_pwd > 0)
+        p_risk->has_empty_pwd++;
+    else
+        p_risk->has_empty_pwd = 1;
 }
 
 void clb_found_comment()
 {
-    p_risk->has_comment = 1;
+    if(p_risk->has_comment > 0)
+        p_risk->has_comment++;
+    else
+        p_risk->has_comment = 1;
 }
 
 void clb_found_table(const SQLString * s)
@@ -115,10 +129,10 @@ void clb_found_table(const SQLString * s)
     DBFWConfig * conf = DBFWConfig::getInstance();
     if (patterns != NULL && conf->re_s_tables >= 0 ) {
         if (patterns->Match( SQL_S_TABLES, s->str_value ) )
-            p_risk->has_s_table = 1;
+            p_risk->has_s_table++;
     }
 #else
-    p_risk->has_s_table = 1;
+    p_risk->has_s_table++;
 #endif
 }
 
@@ -145,7 +159,10 @@ bool clb_check_bruteforce_function(const SQLString * s )
 #ifndef PARSER_DEBUG
     if (patterns != NULL && patterns->HasBruteforcePatterns() )
         if (patterns->Match( SQL_BRUTEFORCE_FUNCTIONS, s->GetStr() ) ) {
-            p_risk->has_bruteforce_function = 1;
+            if(s->GetStr() == string_sleep || s->GetStr() == string_elt) {
+                p_risk->has_bruteforce_function+=2;
+            }
+            p_risk->has_bruteforce_function++;
             return true;
         }
 #endif
@@ -154,17 +171,26 @@ bool clb_check_bruteforce_function(const SQLString * s )
 
 void clb_found_tautology()
 {
-    p_risk->has_tautology = 1;
+    if(p_risk->has_tautology > 0)
+        p_risk->has_tautology++;
+    else
+        p_risk->has_tautology = 1;
 }
 
 void clb_found_query_separator()
 {
-    p_risk->has_separator = 1;
+    if(p_risk->has_separator > 0)
+        p_risk->has_separator++;
+    else
+        p_risk->has_separator = 1;
 }
 
 void clb_found_bruteforce_function()
 {
-    p_risk->has_bruteforce_function = 1;
+    if(p_risk->has_bruteforce_function > 0)
+        p_risk->has_bruteforce_function++;
+    else
+        p_risk->has_bruteforce_function = 1;
 }
 
 
