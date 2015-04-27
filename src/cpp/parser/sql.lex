@@ -238,7 +238,7 @@ with[ \t\v\f\r\n\xA0]+rollup ; // group by modifier
 
 [ \t\v\f\r\n\xA0]+  ; // return END;
 
-.            { /* printf("invalid charachter %s\n", yytext); */ }
+.            { /* fprintf(stderr, "invalid charachter %s\n", yytext); */ }
 
 %%
 //<<EOF>>      return END;
@@ -318,7 +318,7 @@ int yywrap()
 
 int scan_buffer(const char * data)
 {
-    //printf("scanning %s\n", data);
+    //fprintf(stderr, "scanning %s\n", data);
     //YY_BUFFER_STATE buf;
     buf = yy_scan_string(data);
     yyparse();

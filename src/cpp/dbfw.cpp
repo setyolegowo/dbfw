@@ -199,6 +199,7 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
     logEvent(V_DEBUG, "[%d] Proxy callback event: READ\n", proxy_id);
 
     char data[min_buf_size];
+    data[min_buf_size-1] = 0;
     int len = sizeof(data) - 1;
 
     if (_socketRead(watcher.fd, data, len) == false) {
@@ -287,6 +288,7 @@ void DBFW::backendCB(ev::io &watcher, int revents)
     logEvent(V_DEBUG, "Backend callback event: READ\n");
     
     char data[min_buf_size];
+    data[min_buf_size-1] = 0;
     int len = sizeof(data)-1;
 
     if (_socketRead(watcher.fd, data, len) == false) {

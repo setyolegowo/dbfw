@@ -14,5 +14,6 @@ bool normalizeQuery(DBProxyType db_type, std::string & /* query */);
 bool removeQuotedText(DBProxyType db_type, std::string & /* query */);
 bool removeComments(std::string & /* query */);
 bool removeSpaces(std::string & /* query */);
+bool removeUnreadableChar(std::string & /* query */);
 
 #endif

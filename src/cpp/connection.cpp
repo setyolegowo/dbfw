@@ -61,6 +61,7 @@ bool Connection::check_query(std::string & query)
 {
     //return true;
     DBFWConfig * conf = DBFWConfig::getInstance();
+    removeUnreadableChar(query);
     std::string original_query = query;
     std::string reason = "";
 

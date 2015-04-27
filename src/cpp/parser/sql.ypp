@@ -158,7 +158,7 @@ where_cond: /* empty */
 
 select_exps: select_exp                       { $$=$1; }
           | select_exps COMMA select_exp    { $$->Add($3); }
-          | O_BRACE select_exps C_BRACE     {}
+          | O_BRACE select_exps C_BRACE     { $$=$2; }
           ;
 
 select_exp:   math_op alias                   { $$=$1; }
@@ -207,8 +207,8 @@ math_exp:   field                           { $$=$1; }
           | math_exp BIT_AND  field         { $$->Add($3); }
           | BASIC_OP field %prec NEG        { $$=$2; }
           | math_exp POWER    field         { $$->Add($3); /*bit xor*/ }
-          | O_BRACE math_exp C_BRACE        { $$=$2; }
           | O_BRACE select_cmd C_BRACE      { $$=$2; }
+          | O_BRACE math_op C_BRACE         { $$=$2; }
           ;
         
 field:  table_field { $$=new Expression(); 
@@ -312,7 +312,7 @@ simple_fn:    STRING O_BRACE MULTIPLY C_BRACE { clb_check_bruteforce_function($1
             ;
 
 fn_args:  math_op                  { $$=$1; }
-        | fn_args COMMA fn_args      { $$->Add($3); }
+        | fn_args COMMA fn_args    { $$->Add($3); }
         ;
 
 logical_operator: AND
@@ -428,7 +428,7 @@ int main()
 int yyerror(std::string s)
 {
     //extern char * yytext;
-    //fprintf(stderr, "error at char %s\n", yytext);
+    //fprintf(stderr, "%s: %s\n", s.c_str(), yytext);
     //exit(1);
     return 1;
 }

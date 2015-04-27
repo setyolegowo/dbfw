@@ -11,6 +11,7 @@
 //SQL spaces: ' ',\t,\n,\v,\f\r
 //MySQL has additional space 0xA0
 #define sql_space(a)    (a == 0x20 || a == 0xA0 || (a > 0x08 && a < 0x0E))
+#define _readble(a)      (a >= 0x20 && a <= 0x7E)
 
 static bool fixNegativeNumbers(std::string & /* query */);
 static bool removeNumbers(std::string & /* query */);
@@ -85,6 +86,22 @@ bool removeSpaces(std::string & query)
     if (query[j] == ' ')
         query.erase(j,1);
 
+    return true;
+}
+
+bool removeUnreadableChar(std::string & query)
+{
+    int i = 0;
+    int size = query.size();
+    while(i < size) {
+        if(_readble(query[i]))
+            i++;
+        else {
+            query.erase(i,1);
+            size--;
+        }
+    }
+    
     return true;
 }
 
