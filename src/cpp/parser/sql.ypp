@@ -156,10 +156,10 @@ where_cond: /* empty */
           | WHERE logical_exp_list
           ;
 
-select_exps: select_exp                       { $$=$1; }
-          | select_exps COMMA select_exp    { $$->Add($3); }
-          | O_BRACE select_exps C_BRACE     { $$=$2; }
-          ;
+select_exps:  select_exp                      { $$=$1; }
+            | select_exps COMMA select_exp    { $$->Add($3); }
+            | O_BRACE select_exps C_BRACE     { $$=$2; }
+            ;
 
 select_exp:   math_op alias                   { $$=$1; }
             | MULTIPLY                        { $$=new Expression(); }
