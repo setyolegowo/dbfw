@@ -9,6 +9,7 @@
 #include "dbfw.hpp"
 #include "connection.hpp"
 #include "mysql/mysql_con.hpp"
+#include "pgsql/pgsql_con.hpp"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -132,12 +133,9 @@ void DBFW::ioAccept(ev::io &watcher, int revents)
     logEvent(V_DEBUG, "[%d] Client to backend db server connection established\n", proxy_id);
 
     if (db_type == DBTypeMySQL)
-    {
         conn = new MySQLConnection(proxy_id);
-    } // else if (db_type == DBTypePGSQL)
-    // {
-    //     conn = new PgSQLConnection(proxy_id);
-    // }
+    else if (db_type == DBTypePGSQL)
+        conn = new PgSQLConnection(proxy_id);
 
     logEvent(V_DEBUG, "[%d] Database Firewall socket use: sfd=%d, cfd=%d\n", proxy_id, sfd, cfd);
 
