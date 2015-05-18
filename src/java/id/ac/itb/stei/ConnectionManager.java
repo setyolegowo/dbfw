@@ -19,7 +19,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class ConnectionManager implements Runnable {
     
-    private final Log log = LogFactory.getLog(ConnectionManager.class);
+    private static Log log = LogFactory.getLog(ConnectionManager.class);
     protected int          serverPort    = 6000;
     protected ServerSocket serverSocket  = null;
     protected boolean      isStopped     = false;
@@ -42,7 +42,7 @@ public class ConnectionManager implements Runnable {
             } catch (IOException e) {
                 log.error(e);
                 if(isStopped()) {
-                    log.debug("Server Stopped.");
+                    log.fatal("Server Stopped.");
                     break;
                 }
                 throw new RuntimeException(
@@ -53,7 +53,7 @@ public class ConnectionManager implements Runnable {
             );
         }
         this.threadPool.shutdown();
-        log.debug("Server Stopped.");
+        log.info("Server Stopped.");
     }
     
     private synchronized boolean isStopped() {
@@ -78,6 +78,10 @@ public class ConnectionManager implements Runnable {
     }
     
     public static void main(String[] args) {
+        log.info("TEST LOG. HAHAHAHA");
+        log.debug("DEBUG TEST LOG. HAHAHAHA");
+        log.error("ERROR TEST LOG. HAHAHAHA");
+        DBFWContextHandler.initBalana();
         ConnectionManager server = new ConnectionManager();
         new Thread(server).start();
 

@@ -19,7 +19,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class ConnectionWorker implements Runnable {
     
-    private final Log log = LogFactory.getLog(ConnectionWorker.class);
+    private final static Log log = LogFactory.getLog(ConnectionWorker.class);
     protected char[] buffer = new char[2048];
     protected Socket clientSocket = null;
     protected String serverText   = null;
@@ -41,12 +41,12 @@ public class ConnectionWorker implements Runnable {
                 DBFWContextHandler dbfw = null;
                 String message = new String(buffer).substring(0, charsRead);
                 String[] msg = message.split(" ");
-                log.debug("msg :" + message);
-                System.out.println("msg : " + message);
+                log.info("msg :" + message);
                 if(msg.length < 3)
                     error = true;
                 else {
                     dbfw = new DBFWContextHandler(msg[0], msg[1], msg[2]);
+                    dbfw.setIpclient(clientSocket.getRemoteSocketAddress().toString());
                     for(int i=3; i < msg.length; i++){
                         dbfw.addColumn(msg[i]);
                     }
@@ -56,11 +56,11 @@ public class ConnectionWorker implements Runnable {
                     dbfw.run();
                     try (OutputStream output = clientSocket.getOutputStream()) {
                         output.write(("1 " + dbfw.getResult()).getBytes());
-                        System.out.println("msg : " + dbfw.getResult());
+                        log.error("msg : " + dbfw.getResult());
                     }
                 } else {
                     try (OutputStream output = clientSocket.getOutputStream()) {
-                        output.write("0 ERROR".getBytes());
+                        log.error("0 ERROR".getBytes());
                     }
                 }
             }

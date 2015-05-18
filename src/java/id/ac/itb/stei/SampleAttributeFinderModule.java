@@ -39,7 +39,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class SampleAttributeFinderModule extends AttributeFinderModule{
 
-    private Log log = LogFactory.getLog(SampleAttributeFinderModule.class);
+    private static final Log log = LogFactory.getLog(SampleAttributeFinderModule.class);
     private URI defaultSubjectId;
 
     public SampleAttributeFinderModule() {

@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,12 +40,15 @@ import org.xml.sax.SAXException;
  */
 public final class DBFWContextHandler {
 
-    private final Log log = LogFactory.getLog(DBFWContextHandler.class);
+    private final static Log log = LogFactory.getLog(DBFWContextHandler.class);
+    private final static long DIFF_TIME = 1200000; // 1200 seconds == 20 minutes
     private final URI uri_column = URI.create("urn:oasis:names:tc:xacml:3.0:attribute-category:column");
-    private Balana balana;
+    private static Balana balana = null;
+    private static long last_time = 0;
     private String username;
     private String action;
     private String tableResource;
+    private String ipclient;
     private String result;
     public ArrayList<String> attrResource = new ArrayList<>();
 
@@ -58,6 +62,10 @@ public final class DBFWContextHandler {
 
     public void setTableResource(String tableResource) {
         this.tableResource = tableResource;
+    }
+
+    public void setIpclient(String ipclient) {
+        this.ipclient = ipclient;
     }
     
     public void addColumn(String name) {
@@ -81,6 +89,10 @@ public final class DBFWContextHandler {
             return result;
         else
             return null;
+    }
+
+    public String getIpclient() {
+        return ipclient;
     }
     
     public void clearAttrResource() {
@@ -157,7 +169,10 @@ public final class DBFWContextHandler {
      */
     private PDP getPDPNewInstance(){
 
-        PDPConfig pdpConfig = balana.getPdpConfig();
+        PDPConfig pdpConfig;
+        synchronized(this) {
+            pdpConfig = balana.getPdpConfig();
+        }
 
         // registering new attribute finder. so default PDPConfig is needed to change
         AttributeFinder attributeFinder = pdpConfig.getAttributeFinder();
@@ -200,13 +215,16 @@ public final class DBFWContextHandler {
         return doc.getDocumentElement();
     }
     
-    private void initBalana(){
-
+    public synchronized static void initBalana(){
+        Date date = new Date();
+        long current_time = date.getTime();
+        if(current_time - last_time <= DIFF_TIME)
+            return;
+        last_time = current_time;
         try{
             // using file based policy repository. so set the policy location as system property
             String policyLocation = (new File(".")).getCanonicalPath() + File.separator + "conf" + File.separator + "resources";
-            log.debug(policyLocation);
-            System.out.println(policyLocation);
+            log.info(policyLocation);
             System.setProperty(FileBasedPolicyFinderModule.POLICY_DIR_PROPERTY, policyLocation);
         } catch (IOException e) {
             log.error("Can not locate policy repository\n" + e);
