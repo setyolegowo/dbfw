@@ -11,7 +11,6 @@
 #include <map>
 
 #include "../connection.hpp"
-#include "../log.hpp"
 
 bool mysqlPatternsInit(std::string& /*path*/);
 

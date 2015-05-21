@@ -43,6 +43,7 @@ void DBFWConfig::init()
 {
     server_running      = true;
     
+    re_return_sql_error = 1;
     re_block_level      = 30;
     re_warn_level       = 20;
     re_sql_comments     = 30;
@@ -57,6 +58,9 @@ void DBFWConfig::init()
     
     log_level           = 3;
     log_file            = "/var/log/dbfw.log";
+    log_sql             = "";
+    log_risk            = "";
+    log_alert           = "";
 
     perm_port           = 5000;
     perm_host           = "127.0.0.1";
@@ -116,12 +120,13 @@ bool DBFWConfig::load()
             return false;
         }
         str_lowercase(key);
+        logEvent(DEBUG, "[*] WHAT is \"%s\":\"%s\"\n", key.c_str(), value.c_str());
         
         if (section == "risk engine")   parse_re_setting  (key, value);
         else if (section == "logging")  parse_log_setting (key, value);
         else if (section == "dbperm")  parse_perm_setting (key, value);
         else 
-            logEvent(DEBUG, "No section for this key-value configuration: \"%s\"", line.c_str());
+            logEvent(DEBUG, "[*] No section for this key-value configuration: \"%s\"", line.c_str());
     }
 
     return true;
@@ -131,6 +136,7 @@ bool DBFWConfig::parse_re_setting(std::string & key, std::string & value)
 {
     str_lowercase(key);
     if (key == "block_level")                 re_block_level = atoi(value.c_str());
+    else if (key == "return_sql_error")       re_return_sql_error = atoi(value.c_str());
     else if (key == "warn_level")             re_warn_level = atoi(value.c_str());
     else if (key == "risk_sql_comments")      re_sql_comments = atoi(value.c_str());
     else if (key == "risk_senstivite_tables") re_s_tables = atoi(value.c_str());
@@ -142,7 +148,7 @@ bool DBFWConfig::parse_re_setting(std::string & key, std::string & value)
     else if (key == "risk_multiple_queries")  re_multiple_queries = atoi(value.c_str());
     else if (key == "risk bruteforce")        re_bruteforce = atoi(value.c_str());
     else 
-        logEvent(DEBUG, "[Parse ENGINE] No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
+        logEvent(DEBUG, "[*] Parse ENGINE: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
 
     return true;
 }
@@ -151,8 +157,11 @@ bool DBFWConfig::parse_log_setting(std::string & key, std::string & value)
 {
     if (key == "loglevel")      log_level = atoi(value.c_str());
     else if (key == "logfile")  log_file = value;
+    else if (key == "logsql")   log_sql = value;
+    else if (key == "logrisk")  log_risk = value;
+    else if (key == "logalert")  log_alert = value;
     else 
-        logEvent(DEBUG, "[Parse LOG] No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
+        logEvent(DEBUG, "[*] Parse LOG: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
 
     return true;
 }
@@ -162,7 +171,7 @@ bool DBFWConfig::parse_perm_setting(std::string & key, std::string & value)
     if (key == "port")      perm_port = atoi(value.c_str());
     else if (key == "host") perm_host = value;
     else 
-        logEvent(DEBUG, "[Parse DBPerm] No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
+        logEvent(DEBUG, "[*] Parse DBPerm: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
 
     return true;
 }

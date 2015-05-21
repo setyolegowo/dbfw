@@ -10,6 +10,7 @@
 #include "../normalization.hpp"
 #include "../config.hpp"
 #include "../dbperm.hpp"
+#include "../log.hpp"
 #include "../misc.hpp"
 // #include "../dbmap.hpp"
 
@@ -486,26 +487,26 @@ bool MySQLConnection::parseResponse(std::string & response)
                     state++;
                 } else {
                     if(state == number_of_fields) {
-                        if(sql_action == "select") {
-                            for(it_map = map_tmp.begin(); it_map != map_tmp.end(); ++it_map) {
-                                DBPerm perm;
-                                perm.addAttr(it_map->second);
-                                std::string uri_resource = itoa(iProxyId);
-                                uri_resource.append("/"); uri_resource.append(db_name);
-                                uri_resource.append("/"); uri_resource.append(it_map->first);
-                                perm.checkout(db_user, sql_action, uri_resource);
-                                for(std::map<std::string, unsigned char>::iterator it = perm.mask_map.begin();
-                                        it != perm.mask_map.end(); ++it) {
-                                    tmp.assign(it_map->first); tmp.append(":"); tmp.append(it->first);
-                                    std::multimap<std::string, int>::iterator _it;
-                                    for (_it = map_field.equal_range(tmp).first;
-                                        _it != map_field.equal_range(tmp).second; ++_it)
-                                    {
-                                        map_perm[_it->second] = (int) it->second;
-                                    }
+                        // if(sql_action == "select") {
+                        for(it_map = map_tmp.begin(); it_map != map_tmp.end(); ++it_map) {
+                            DBPerm perm;
+                            perm.addAttr(it_map->second);
+                            std::string uri_resource = itoa(iProxyId);
+                            uri_resource.append("/"); uri_resource.append(db_name);
+                            uri_resource.append("/"); uri_resource.append(it_map->first);
+                            perm.checkout(db_user, sql_action, uri_resource);
+                            for(std::map<std::string, unsigned char>::iterator it = perm.mask_map.begin();
+                                    it != perm.mask_map.end(); ++it) {
+                                tmp.assign(it_map->first); tmp.append(":"); tmp.append(it->first);
+                                std::multimap<std::string, int>::iterator _it;
+                                for (_it = map_field.equal_range(tmp).first;
+                                    _it != map_field.equal_range(tmp).second; ++_it)
+                                {
+                                    map_perm[_it->second] = (int) it->second;
                                 }
                             }
                         }
+                        // }
                         state++;
                     }
                     if((data[start+2]<<16 | data[start+1] << 8 | data[start]) <= 5) {
@@ -632,10 +633,11 @@ bool MySQLConnection::ParseResponsePacket(const unsigned char* data, size_t& res
         //unsigned int server_error = (data[6] << 8 | data[5]);
         size_t max_error_len = response_size - 7;
         size_t error_len = strlen((const char*) data + 7);
+        DBFWConfig * cfg = DBFWConfig::getInstance();
         if (error_len > max_error_len)
             error_len = max_error_len;
 
-        if (error_len > 0) {
+        if (!cfg->re_return_sql_error && error_len > 0) {
             std::string full_error = "";
             full_error.append((const char*) data + 7, error_len);
             logEvent(SQL_DEBUG, "SQL_ERROR: %s\n", full_error.c_str());

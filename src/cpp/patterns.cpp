@@ -132,8 +132,7 @@ bool SQLPatterns::Load(std::string & cfg_file)
             end_section = line.find(']');
             //check if we found end of section
             if (end_section == 1 || end_section == std::string::npos) {
-                logEvent(DEBUG, "Failed to parse following config line: %s\n",
-                line.c_str());
+                logEvent(CRIT, "Failed to parse following config line: %s\n", line.c_str());
                 return false;
             }
             section = line.substr(1, end_section-1);
@@ -348,4 +347,3 @@ bool SQLPatterns::Match(MatchType type, const std::string & str)
     // not found
     return (rc >= 0);
 }
-

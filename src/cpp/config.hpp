@@ -27,6 +27,7 @@ class DBFWConfig {
         bool server_running;
 
         // risk engine factors
+        int re_return_sql_error;
         int re_block_level;
         int re_warn_level;
         int re_sql_comments;
@@ -41,6 +42,9 @@ class DBFWConfig {
 
         int log_level;
         std::string log_file;
+        std::string log_sql;
+        std::string log_risk;
+        std::string log_alert;
 
         int perm_port;
         std::string perm_host;

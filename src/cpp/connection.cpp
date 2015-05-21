@@ -69,7 +69,8 @@ bool Connection::check_query(std::string & query)
     str_lowercase(query);
     // perform normalization - make a pattern of the query
     normalizeQuery( (DBProxyType) dbType, query);
-    logEvent(SQL_DEBUG, "AFTER NORM   : %s\n", query.c_str());
+    logSQL  (CRIT, "[%d] %s\n", iProxyId, original_query.c_str());
+    logEvent(SQL_DEBUG, "[%d] AFTER NORM   : %s\n", iProxyId, query.c_str());
 
     // bool ret = false;
     int risk = 0;
@@ -106,21 +107,25 @@ bool Connection::check_query(std::string & query)
     uri_resource.append(db_name);
     perm.checkout(db_user, sql_action, uri_resource);
     if(perm.error_result) {
-        logEvent(DEBUG, "Permission error\n");
+        logRisk(ERR, "[%d] Permission ERROR.  DB:%s, ACTION:%s, RESOURCE:%s\n",
+            iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
     } else {
-        if(perm.getResult() > 0) {
-            if(perm.getResult() == 1) {
-                logEvent(VV_DEBUG, "Permission denied\n");
+        int get_result = perm.getResult();
+        if(get_result > 0) {
+            if(get_result == 1) {
+                logRisk(INFO, "[%d] Permission DENIED. DB:%s, ACTION:%s, RESOURCE:%s\n",
+                    iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
                 return false;
             } else {
-                logEvent(VV_DEBUG, "Else permission\n");
+                logRisk(INFO, "[%d] ELSE Permission.   DB:%s, ACTION:%s, RESOURCE:%s\n",
+                    iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
             }
         } else {
-            logEvent(VV_DEBUG, "Permission permit\n");
+            logRisk(DEBUG, "[%d] Permission PERMIT. DB:%s, ACTION:%s, RESOURCE:%s\n",
+                iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
         }
     }
 
-    logEvent(SQL_DEBUG, "RISK         : %d\n", risk);
     if (risk >= conf->re_block_level) {
         logAlert(iProxyId, db_name, db_user, db_user_ip, original_query,
             query, reason, risk, 2);

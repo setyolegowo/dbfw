@@ -17,30 +17,51 @@
 #include <sys/stat.h>  // for fstat
 #include <time.h>
 
-static bool logReload ();
+static bool logReload (int type);
+static bool logClose2(int type);
+static bool logInit   (std::string & file, int type);
 static void printLine ( const unsigned char *, int );
 static FILE * log_file = stdout;
+static FILE * log_sql = stdout;
+static FILE * log_risk = stderr;
 static FILE * log_alert = stderr;
 static int log_level = 3;
 static char month_str[][4] = { {"Jan"}, {"Feb"}, {"Mar"}, {"Apr"}, {"May"}, {"Jun"}, {"Jul"}, {"Aug"}, {"Sep"}, {"Oct"}, {"Nov"}, {"Dec"} };
 
 bool _logInit ()
 {
+    bool retval = true;
     DBFWConfig * cfg = DBFWConfig::getInstance();
 
-    return logInit(cfg->log_file, cfg->log_level);
+    log_level = cfg->log_level;
+    retval = logInit(cfg->log_file, 1);
+    if(!retval) return retval;
+    retval = logInit(cfg->log_sql, 2);
+    if(!retval) return retval;
+    retval = logInit(cfg->log_risk, 3);
+    if(!retval) return retval;
+    return logInit(cfg->log_alert, 4);
 }
 
-bool logInit (std::string & file, int level)
+bool logInit (std::string & file, int type)
 {
-    log_level = level;
+    if(file.length() == 0)
+        return true;
 
     FILE * fp = fopen(file.c_str(), "a+");
 
-    if (fp == NULL)
+    if (fp == NULL) {
+        fprintf(stderr, "[*] Failed to open log file %s\n", file.c_str());
         return false;
+    }
     
-    log_file = fp;
+    switch(type) {
+        case 1: log_file = fp;  break;
+        case 2: log_sql = fp;   break;
+        case 3: log_risk = fp;  break;
+        case 4: log_alert = fp; break;
+        default: fclose(fp);    break;
+    }
 
     return true;
 }
@@ -50,7 +71,42 @@ bool logClose ()
     if (log_file != stdout) {
         fclose(log_file);
     }
+    if (log_sql != stdout) {
+        fclose(log_sql);
+    }
+    if (log_risk != stderr) {
+        fclose(log_risk);
+    }
+    if (log_alert != stderr) {
+        fclose(log_alert);
+    }
     log_file = stdout;
+    log_sql = stdout;
+    log_risk = stderr;
+    log_alert = stderr;
+    return true;
+}
+
+bool logClose2(int type)
+{
+    switch(type) {
+        case 2:
+            if(log_sql != stdout) fclose(log_sql);
+            log_sql = stdout;
+            break;
+        case 3:
+            if(log_risk != stderr) fclose(log_risk);
+            log_risk = stderr;
+            break;
+        case 4:
+            if(log_alert != stderr) fclose(log_alert);
+            log_alert = stderr;
+            break;
+        default:
+            if(log_file != stdout) fclose(log_file);
+            log_file = stdout;
+            break;
+    }
     return true;
 }
 
@@ -99,7 +155,7 @@ void logEvent (ErrorType type, const char * fmt, ...)
             break;
     }
 
-    logReload();
+    logReload(1);
     fprintf ( log_file, "[%02d/%s/%02d %d:%02d:%02d] %s",
               now->tm_mday, month_str[now->tm_mon], now->tm_year+1900,
               now->tm_hour, now->tm_min, now->tm_sec, error );
@@ -107,6 +163,56 @@ void logEvent (ErrorType type, const char * fmt, ...)
     vfprintf ( log_file, fmt, ap );
     va_end (ap);
     fflush (log_file);
+}
+
+void logSQL (ErrorType type, const char * fmt, ...)
+{
+    va_list ap;
+    struct tm *now;
+    time_t tval;
+
+    if (log_level < (int) type) {
+        va_end(ap);
+        return;
+    }
+
+    va_start(ap, fmt);
+    tval = time(NULL);
+    now = localtime(&tval);
+
+    logReload(2);
+    fprintf ( log_sql, "[%02d/%s/%02d %d:%02d:%02d] ",
+              now->tm_mday, month_str[now->tm_mon], now->tm_year+1900,
+              now->tm_hour, now->tm_min, now->tm_sec);
+
+    vfprintf ( log_sql, fmt, ap );
+    va_end (ap);
+    fflush (log_sql);
+}
+
+void logRisk (ErrorType type, const char * fmt, ...)
+{
+    va_list ap;
+    struct tm *now;
+    time_t tval;
+
+    if (log_level < (int) type) {
+        va_end(ap);
+        return;
+    }
+
+    va_start(ap, fmt);
+    tval = time(NULL);
+    now = localtime(&tval);
+
+    logReload(3);
+    fprintf ( log_risk, "[%02d/%s/%02d %d:%02d:%02d] ",
+              now->tm_mday, month_str[now->tm_mon], now->tm_year+1900,
+              now->tm_hour, now->tm_min, now->tm_sec);
+
+    vfprintf ( log_risk, fmt, ap );
+    va_end (ap);
+    fflush (log_risk);
 }
 
 void logHex (ErrorType type, const unsigned char * data, int size)
@@ -155,7 +261,7 @@ void logHex (ErrorType type, const unsigned char * data, int size)
     int lines = size / 16;
     int i = 0;
 
-    logReload();
+    logReload(1);
 
     for ( i = 0; i < lines; i++ ) {
         // fprintf(log_file, error);
@@ -184,10 +290,13 @@ bool logAlert(int proxy_id, std::string & dbname, std::string & dbuser, std::str
     tval = time(NULL);
     now = localtime(&tval);
 
+    logReload(4);
+
     fprintf(log_alert, "[%02d/%s/%02d %d:%02d:%02d] %d:%d:%d\n", now->tm_mday, month_str[now->tm_mon],
         now->tm_year+1900, now->tm_hour, now->tm_min, now->tm_sec, proxy_id, risk, block);
     fprintf(log_alert, "%s:%s@%s\nq:%s\np:%s\nr:%s", dbuser.c_str(), dbuserip.c_str(), dbname.c_str(), query.c_str(), pattern.c_str(), reason.c_str());
-    fprintf(log_alert, "\n\n");
+
+    fflush(log_alert);
 
     return true;
 }
@@ -228,22 +337,35 @@ static void printLine (const unsigned char * data, int max)
     fprintf(log_file, "%s", temp);
 }
 
-static bool logReload ()
+static bool logReload (int type)
 {
     DBFWConfig * cfg = DBFWConfig::getInstance();
+    FILE * fp;
+    bool type_stdout = true;
     struct stat f_stat;
+    switch(type) {
+        case 2: fp = log_sql;   break;
+        case 3: fp = log_risk; type_stdout = false;  break;
+        case 4: fp = log_alert; type_stdout = false; break;
+        default: fp = log_file; break;
+    }
 
-    if (log_file != stdout) {
+    if ((type_stdout && fp != stdout) || (!type_stdout && fp != stderr)) {
         // check if file was deleted
-        if ( fstat(fileno(log_file), &f_stat) == 0 ) {
+        if ( fstat(fileno(fp), &f_stat) == 0 ) {
             // check number of hard links, 0 - deleted
             if (f_stat.st_nlink != 0)
                 return true;
         }
     }
 
-    logClose();
-    logInit(cfg->log_file, cfg->log_level);
+    logClose2(type);
+    switch(type) {
+        case 2: logInit(cfg->log_sql, 2);   break;
+        case 3: logInit(cfg->log_risk, 3);  break;
+        case 4: logInit(cfg->log_alert, 4); break;
+        default: logInit(cfg->log_file, 1);  break;
+    }
 
     return true;
 }

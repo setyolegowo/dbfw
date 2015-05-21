@@ -16,6 +16,7 @@
 #include "config.hpp"
 #include "dbfw.hpp"
 #include "mysql/mysql_con.hpp"
+#include "pgsql/pgsql_con.hpp"
 #include "proxymap.hpp"
 
 /* ---------------------------------------------------------------- */
@@ -37,7 +38,6 @@ int main (int argc, char** argv)
     DBFWConfig * cfg = DBFWConfig::getInstance();
     if(parameterCheck(argc, argv, cfg->conf_path) < 0)
         return -1;
-    
     fix_dir_name(cfg->conf_path);
     if (cfg->load() == false) {
         fprintf(stderr, "Specify location of the configuration file using \"-p\" parameter.\n\n");
@@ -46,7 +46,7 @@ int main (int argc, char** argv)
         return -1;
     }
     if(_logInit() == false) {
-        fprintf(stderr, "Failed to open log file %s\n", cfg->log_file.c_str());
+        fprintf(stderr, "Failed to open log file\n");
         return -1;
     }
 
@@ -56,11 +56,11 @@ int main (int argc, char** argv)
     if (mysqlPatternsInit(cfg->conf_path) == false) {
         fprintf(stderr, "Failed to load MySQL list of patterns.\n");
         return -1;
-    } /*
-    if (pgsql_patterns_init(conf_path) == false) {
+    }
+    if (pgsql_patterns_init(cfg->conf_path) == false) {
         fprintf(stderr, "Failed to load PGSQL list of patterns.\n");
         return -1;
-    } END OF DBMS RULES */
+    }
 
     initLinux();
 

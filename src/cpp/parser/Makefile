@@ -1,9 +1,9 @@
 FILES:= sql.o sql.tab.o parser.o
 
-CPP=g++
-CFLAGS:=-Wall -DPARSER_DEBUG -g
+CPP=g++ -std=c++11
+CFLAGS:=-std=c++11 -Wall -DPARSER_DEBUG -g
 #ifndef CXXFLAGS
-CXXFLAGS:=-g -DPARSER_DEBUG -Wall
+CXXFLAGS:=-std=c++11 -g -DPARSER_DEBUG -Wall
 #endif
 
 #ifdef CXXFLAGS
