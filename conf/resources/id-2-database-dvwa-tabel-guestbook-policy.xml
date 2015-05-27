@@ -1,9 +1,9 @@
-<Policy xmlns="urn:oasis:names:tc:xacml:3.0:core:schema:wd-17" PolicyId="ID_1_Database_DVWA_Table_Users_Policy" RuleCombiningAlgId="urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:first-applicable" Version="1.0">
+<Policy xmlns="urn:oasis:names:tc:xacml:3.0:core:schema:wd-17" PolicyId="ID_2_Database_DVWA_Table_Guestbook_Policy" RuleCombiningAlgId="urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:first-applicable" Version="1.0">
    <Target>
       <AnyOf>
          <AllOf>
             <Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">1/dvwa/users</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">2/dvwa/guestbook</AttributeValue>
                <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
             </Match>
             <Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
@@ -33,12 +33,9 @@
       <Condition>
          <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of">
             <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-bag">
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">user_id</AttributeValue>
-               <!--<AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">first_name</AttributeValue>
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">last_name</AttributeValue>-->
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">user</AttributeValue>
-               <!--<AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">password</AttributeValue>
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">avatar</AttributeValue>-->
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">comment_id</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">comment</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">name</AttributeValue>
             </Apply>
             <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:column" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
          </Apply>

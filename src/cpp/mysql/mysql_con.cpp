@@ -637,13 +637,15 @@ bool MySQLConnection::ParseResponsePacket(const unsigned char* data, size_t& res
         if (error_len > max_error_len)
             error_len = max_error_len;
 
-        if (!cfg->re_return_sql_error && error_len > 0) {
+        if (error_len > 0) {
             std::string full_error = "";
             full_error.append((const char*) data + 7, error_len);
             logEvent(SQL_DEBUG, "SQL_ERROR: %s\n", full_error.c_str());
-            blockResponse(response);
-            response_in.chop_back(response_in.size());
-            data = response_in.raw();
+            if(!cfg->re_return_sql_error) {
+                blockResponse(response);
+                response_in.chop_back(response_in.size());
+                data = response_in.raw();
+            }
         }
 
         return true;
