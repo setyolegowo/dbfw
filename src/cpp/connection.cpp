@@ -106,10 +106,14 @@ bool Connection::check_query(std::string & query)
 
     if(conf->re_perm_engine) {
         DBPerm perm;
-        perm.addAttr(sql_tabel);
         std::string uri_resource = itoa(iProxyId);
-        uri_resource.append("/");
-        uri_resource.append(db_name);
+        if(sql_tabel.size() > 0) {
+            perm.addAttr(sql_tabel);
+            uri_resource.append("/");
+            uri_resource.append(db_name);
+        } else {
+            perm.addAttr(db_name);
+        }
         perm.checkout(db_user, sql_action, uri_resource);
         if(perm.error_result) {
             logRisk(ERR, "[%d] Permission ERROR.  DB:%s, ACTION:%s, RESOURCE:%s\n",

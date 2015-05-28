@@ -15,6 +15,7 @@
 static SQLPatterns pgsql_patterns;
 static unsigned char PGSQL_CANCEL[] = {0x00, 0x00, 0x00, 0x0F, 0x04, 0xD2, 0x16, 0xDF};
 static bool pg_parse_protocol_params(const unsigned char * data, size_t request_size, size_t & ind, const char * const option, unsigned char option_len, std::string & result);
+static void pg_parse_string(const unsigned char * data, size_t start, size_t & offset, std::string & buff);
 
 bool pgsql_patterns_init(std::string & path)
 {
@@ -187,9 +188,10 @@ bool PgSQLConnection::parseResponse(std::string & response)
     logEvent(NET_DEBUG, "[%d][PGSQL] Parse Response: full size %d bytes\n", iProxyId, full_size); //-V111
     // logHex(VV_DEBUG, data, full_size);
 
-    if (!( first_request || data[0] == PGSQL_SRV_PASSWORD_MESSAGE || data[0] == PGSQL_ERROR_RESPONSE || SecondPacket))
+    if (!( first_request || data[0] == PGSQL_SRV_PASSWORD_MESSAGE || data[0] == PGSQL_ERROR_RESPONSE ||
+        SecondPacket)) // data[0] == PGSQL_SRV_GETROW 
     {
-        logEvent(VV_DEBUG, "[%d][PGSQL] READING RESULT-SET\n", iProxyId, full_size); //-V111
+        // logEvent(VV_DEBUG, "[%d][PGSQL] READING RESULT-SET. TYPE=%d(0x%x)\n", iProxyId, data[0], data[0]); //-V111
         if (full_size < 5)
             return true;
             
@@ -197,8 +199,10 @@ bool PgSQLConnection::parseResponse(std::string & response)
         while(start + response_size <= full_size)
         {
             start += response_size;
-            if(start + 4 < full_size)
+            if(start + 4 < full_size) {
+                // logEvent(VV_DEBUG, "[%d][PGSQL] READING RESULT-SET. TYPE=%d(0x%x)\n", iProxyId, data[start], data[start]); //-V111
                 response_size = (data[1+start] << 24 | data[2+start] << 16 | data[3+start] << 8 | data[4+start])+1;
+            }
             else
                 break;
         }
@@ -519,9 +523,18 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
                     }
                 }
                 } break;
-            case PGSQL_SRV_GETROW:
+            case PGSQL_SRV_GETROW: {
                 logEvent(error_type, "[%d][PGSQL] Parse Response: ROW DESCRIPTION command\n", iProxyId);
-                break;
+                size_t field_count = data[5+start] << 8 | data[6+start];
+                size_t offset = 7;
+
+                logEvent(VV_DEBUG, "[%d][PGSQL] Field Size: %d\n", iProxyId, field_count);
+                while(start+offset < start + response_size) { //-V112
+                    pg_parse_string(data, start, offset, str_value);
+                    logEvent(VV_DEBUG, "[%d][PGSQL] Get Field Name: %s\n", iProxyId, str_value.c_str());
+                    offset+=18;
+                }
+                } break;
             case PGSQL_ROW_DATA:
                 logEvent(error_type, "[%d][PGSQL] Parse Response: ROW DATA command\n", iProxyId);
                 break;
@@ -584,7 +597,7 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
                 logEvent(error_type, "[%d][PGSQL] Parse Response: Ready For Query\n", iProxyId);
                 break;
             default:
-                logEvent(error_type, "[%d][PGSQL] Parse Response: Unknown type: %d\n", iProxyId, type);
+                logEvent(error_type, "[%d][PGSQL] Parse Response: Unknown type: 0x%x\n", iProxyId, type);
                 break;
         }
         start += response_size + 1;
@@ -595,4 +608,12 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
     if(SecondPacket) SecondPacket = false;
 
     return true;
+}
+void pg_parse_string(const unsigned char * data, size_t start, size_t & offset, std::string & buff)
+{
+    size_t offset_tmp = offset;
+    while(data[start + offset_tmp] != 0x00) offset_tmp++;
+    buff.clear();
+    buff.append((const char *) data + start + offset, offset_tmp-offset);
+    offset = offset_tmp + 1;
 }
