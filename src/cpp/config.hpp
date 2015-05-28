@@ -27,7 +27,9 @@ class DBFWConfig {
         bool server_running;
 
         // risk engine factors
+        int re_active;
         int re_return_sql_error;
+        int re_perm_engine;
         int re_block_level;
         int re_warn_level;
         int re_sql_comments;

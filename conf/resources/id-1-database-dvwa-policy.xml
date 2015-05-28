@@ -6,8 +6,8 @@
                <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">1/dvwa</AttributeValue>
                <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
             </Match>
-            <Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">select</AttributeValue>
+            <Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-regexp-match">
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">select|show</AttributeValue>
                <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:action:action-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:action" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
             </Match>
          </AllOf>

@@ -459,10 +459,12 @@ bool MySQLConnection::parseResponse(std::string & response)
         number_of_fields = data[4];
         state = 0;
         logEvent(V_DEBUG, "[%d][MySQL] Number of fields: %d\n", iProxyId, number_of_fields);
+        DBFWConfig * conf = DBFWConfig::getInstance();
         while((start + response_size) <= full_size) {
-            if(start > 0 && lastCommandId == MYSQL_QUERY) {
+            if(conf->re_perm_engine && start > 0 && lastCommandId == MYSQL_QUERY) {
                 if(state < number_of_fields) {
                     no_table = false;
+                    // logHex(V_DEBUG, data + start, response_size);
                     getHeaderSQLFromCol(data + start, 5, buffer);
                     // logEvent(V_DEBUG, "Data on Column 5: %s\n", buffer.c_str());
                     if(buffer.size() > 0) {

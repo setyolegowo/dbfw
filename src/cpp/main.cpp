@@ -24,6 +24,7 @@
 /* ---------------------------------------------------------------- */
 
 static bool fix_dir_name (std::string &);
+static bool _configuration_check();
 // static void timeout_cb (EV_P_ struct ev_timer *, int);
 int initLinux ();
 int parameterCheck (int, char **, std::string &);
@@ -49,8 +50,12 @@ int main (int argc, char** argv)
         fprintf(stderr, "Failed to open log file\n");
         return -1;
     }
+    if(_configuration_check() == false) {
+        fprintf(stderr, "Configuration check failed. Please read log.\n");
+        return -1;
+    }
 
-    logEvent(INFO, "Application started\n");
+    logEvent(INFO, "[*] Application started\n");
 
     /* DBMS RULES INIT */
     if (mysqlPatternsInit(cfg->conf_path) == false) {
@@ -142,4 +147,20 @@ int parameterCheck(int argc, char** argv, std::string & conf_path)
         return -1;
     } else
         return 0;
+}
+
+bool _configuration_check()
+{
+    bool retval = true;
+    DBFWConfig * cfg = DBFWConfig::getInstance();
+
+    if(cfg->re_block_level <= cfg->re_warn_level) {
+        logEvent(CRIT, "[*] Block level lower or equal warn level.\n");
+        return false;
+    }
+    if(!cfg->re_active)          logEvent(CRIT, "[*] Risk engine DISABLED\n");
+    if(!cfg->re_perm_engine)     logEvent(CRIT, "[*] Permission Engine DISABLED\n");
+    if(cfg->re_return_sql_error) logEvent(INFO, "[*] DBFW will return DBMS error message.\n");
+
+    return retval;
 }

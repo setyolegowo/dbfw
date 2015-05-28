@@ -474,7 +474,8 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
     ErrorType error_type = V_DEBUG;
 
     if (max_response_size < 3) {
-        logEvent(NET_DEBUG, "[%d][PGSQL] received %d bytes of parser response\n", iProxyId, max_response_size); //-V111
+        logEvent(NET_DEBUG, "[%d][PGSQL] received %d bytes of parser response. Lower thank expected.\n",
+            iProxyId, max_response_size); //-V111
         return false;
     }
 

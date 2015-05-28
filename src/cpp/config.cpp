@@ -43,7 +43,8 @@ void DBFWConfig::init()
 {
     server_running      = true;
     
-    re_return_sql_error = 1;
+    re_active           = 1;
+    re_perm_engine      = 1;
     re_block_level      = 30;
     re_warn_level       = 20;
     re_sql_comments     = 30;
@@ -55,6 +56,7 @@ void DBFWConfig::init()
     re_empty_password   = 30;
     re_multiple_queries = 30;
     re_bruteforce       = 15;
+    re_return_sql_error = 1;
     
     log_level           = 3;
     log_file            = "/var/log/dbfw.log";
@@ -136,7 +138,8 @@ bool DBFWConfig::parse_re_setting(std::string & key, std::string & value)
 {
     str_lowercase(key);
     if (key == "block_level")                 re_block_level = atoi(value.c_str());
-    else if (key == "return_sql_error")       re_return_sql_error = atoi(value.c_str());
+    else if (key == "risk_detection")         re_active = atoi(value.c_str());
+    else if (key == "permission_engine")      re_perm_engine = atoi(value.c_str());
     else if (key == "warn_level")             re_warn_level = atoi(value.c_str());
     else if (key == "risk_sql_comments")      re_sql_comments = atoi(value.c_str());
     else if (key == "risk_senstivite_tables") re_s_tables = atoi(value.c_str());
@@ -147,6 +150,7 @@ bool DBFWConfig::parse_re_setting(std::string & key, std::string & value)
     else if (key == "risk_empty_password")    re_empty_password = atoi(value.c_str());
     else if (key == "risk_multiple_queries")  re_multiple_queries = atoi(value.c_str());
     else if (key == "risk bruteforce")        re_bruteforce = atoi(value.c_str());
+    else if (key == "return_sql_error")       re_return_sql_error = atoi(value.c_str());
     else 
         logEvent(DEBUG, "[*][Config] Parse ENGINE: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
 
