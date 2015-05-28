@@ -225,7 +225,7 @@ void DBFW::proxyCB(ev::io &watcher, int revents)
 bool DBFW::_proxyWriteCB(ev::io &watcher, Connection * conn)
 {
     int len = conn->response_out.size();
-    logEvent(V_DEBUG, "[%d] proxy socket %d write %d byte(s)\n", proxy_id, watcher.fd, len);
+    logEvent(V_DEBUG, "[%d] Proxy socket %d write %d byte(s)\n", proxy_id, watcher.fd, len);
     if (len == 0) {
         // we can clear the WRITE event flag
         _disableEventWriter(conn,true);
@@ -271,7 +271,7 @@ void DBFW::backendCB(ev::io &watcher, int revents)
 
     // check if we can write to this socket
     if ( revents & EV_WRITE ) {
-        logEvent(V_DEBUG, "Backend callback event: WRITE\n");
+        logEvent(V_DEBUG, "[%d] Backend callback event: WRITE\n", proxy_id);
         if ( _backendWriteCB(watcher, conn) == false ) {
             // failed to write, close this socket
             conn->close();
@@ -283,7 +283,7 @@ void DBFW::backendCB(ev::io &watcher, int revents)
     if (!(revents & EV_READ))
         return;
 
-    logEvent(V_DEBUG, "Backend callback event: READ\n");
+    logEvent(V_DEBUG, "[%d] Backend callback event: READ\n", proxy_id);
     
     char data[min_buf_size];
     data[min_buf_size-1] = 0;
@@ -315,7 +315,7 @@ bool DBFW::_backendWriteCB(ev::io &watcher, Connection * conn)
     int len = conn->request_out.size();
 
     if (len == 0) {
-        logEvent(NET_DEBUG, "[%d] backend socket %d write %d bytes\n", proxy_id, watcher.fd, len);
+        logEvent(NET_DEBUG, "[%d] Backend socket %d write %d bytes\n", proxy_id, watcher.fd, len);
         _disableEventWriter(conn,false);            
         // clear_init_event(conn,fd,EV_READ | EV_PERSIST,wrap_Backend,(void *)conn,false);
         return true;
@@ -392,13 +392,13 @@ int DBFW::_serverSocket(std::string & ip, int port)
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
 
     if (bind(sfd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-        logEvent(NET_DEBUG, "Failed to bind server socket on %s:%d\n", ip.c_str(), port);
+        logEvent(NET_DEBUG, "[%d] Failed to bind server socket on %s:%d\n", proxy_id, ip.c_str(), port);
         socketClose(sfd);
         return -1;
     }
     
     if (listen(sfd, 1024) < 0) {
-        logEvent(NET_DEBUG, "Failed to switch socket %d to listener mode\n", sfd);
+        logEvent(NET_DEBUG, "[%d] Failed to switch socket %d to listener mode\n", proxy_id, sfd);
         socketClose(sfd);
         return -1;
     }
@@ -491,7 +491,7 @@ bool DBFW::_proxyValidateClientRequest(Connection * conn)
     // mysql_validate(request);
     if (conn->parseRequest(request, hasResponse) == false)
     {
-        logEvent(NET_DEBUG, "Failed to parse request, closing socket.\n");
+        logEvent(NET_DEBUG, "[%d] Failed to parse request, closing socket.\n", proxy_id);
         return false;
     }
 
@@ -538,7 +538,7 @@ bool _socketRead(int fd, char * data, int & size)
     if ((size = recv(fd, data, size, 0)) < 0)
     {
         size = 0;
-        logEvent(NET_DEBUG, "Socket %d read error, errno=%d\n", fd, errno);
+        logEvent(NET_DEBUG, "[*] Socket %d read error, errno=%d\n", fd, errno);
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
            return true;
         }
@@ -546,7 +546,7 @@ bool _socketRead(int fd, char * data, int & size)
     }
     if (size == 0)
     {
-       logEvent(NET_DEBUG, "Socket %d read error. Size receive 0 byte.\n", fd);
+       logEvent(NET_DEBUG, "[*] Socket %d read error. Size receive 0 byte.\n", fd);
        return false;
     }
     // logEvent(NET_DEBUG, "Socket %d read %d byte(s)\n", fd, size);
@@ -563,7 +563,7 @@ bool _socketWrite(int fd, const char* data, int & size)
     // logHex(VV_DEBUG, (const unsigned char *) data, size);
     if ((size = send(fd, data, size, 0))  <= 0)
     {
-        logEvent(NET_DEBUG, "[%d] Socket write error %d\n", fd, errno);
+        logEvent(NET_DEBUG, "[*] Socket %d write error %d\n", fd, errno);
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
             size = 0;
             return true;
@@ -581,7 +581,7 @@ void _disableEventWriter(Connection * conn, bool proxy)
     
     if (del_event) {
         writer->stop();
-        logEvent(NET_DEBUG, "No data clear write event, fd: %d\n", writer->fd);
+        logEvent(NET_DEBUG, "[*] No data clear write event, fd: %d\n", writer->fd);
     }
 }
 
@@ -592,7 +592,7 @@ void _enableEventWriter(Connection * conn, bool proxy)
 
     if (add_event) {
         writer->start();
-        logEvent(NET_DEBUG, "Try again add write event, fd: %d\n", writer->fd);
+        logEvent(NET_DEBUG, "[*] Try again add write event, fd: %d\n", writer->fd);
     }
 }
 

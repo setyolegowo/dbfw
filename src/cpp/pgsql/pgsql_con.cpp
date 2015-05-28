@@ -99,13 +99,14 @@ bool PgSQLConnection::parseRequest(std::string & request, bool & hasResponse)
     
     size_t request_size,start =0;
     const unsigned char * data = request_in.raw();
-    logEvent(NET_DEBUG,"request: full size: %d\n",full_size);
+    logEvent(NET_DEBUG, "[%d][PGSQL] request: full size: %d\n", iProxyId, full_size);
     // logHex(NET_DEBUG,data,full_size);
     //check if we got full packet
     if (full_size == 8) {
         // wait for more data to decide
         unsigned int client_flags = (data[7] << 24 | data[6]<<16 | data[5] << 8 | data[4]);
-        if (client_flags & PGSQL_CON_SSL) logEvent(SQL_DEBUG, "Client uses SSL encryption\n");
+        if (client_flags & PGSQL_CON_SSL)
+            logEvent(SQL_DEBUG, "[%d][PGSQL] Client uses SSL encryption\n", iProxyId);
         //disable ssl encription not supported yet
         if (response_in.size() != 0)
             // push it to the server response parsing queue
@@ -121,7 +122,7 @@ bool PgSQLConnection::parseRequest(std::string & request, bool & hasResponse)
     }
     if (first_request) {
         request_size = data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3]; 
-        logEvent(SQL_DEBUG, "Request size: %d, first request\n",request_size);
+        logEvent(SQL_DEBUG, "[%d][PGSQL] Request size: %d, first request\n", iProxyId, request_size);
         if (request_size > full_size)
             return true;
         if (!parse_request(data, request_size,hasResponse))
@@ -131,7 +132,8 @@ bool PgSQLConnection::parseRequest(std::string & request, bool & hasResponse)
     }
 
     request_size = (data[1] << 24 | data[2] << 16 | data[3] << 8 | data[4])+1; 
-    logEvent(NET_DEBUG, "request: packet size expected %d bytes (received %d)\n", full_size - start, request_size);
+    logEvent(NET_DEBUG, "[%d][PGSQL] request: packet size expected %d bytes (received %d)\n",
+        iProxyId, full_size - start, request_size);
     while(start + request_size <= full_size)
     {
         parse_request(data+start, request_size,hasResponse);
@@ -143,7 +145,8 @@ bool PgSQLConnection::parseRequest(std::string & request, bool & hasResponse)
             return true;
         }
         request_size = (data[start+1] << 24 | data[start+2] << 16 | data[start+3] << 8 | data[start+4])+1; 
-        logEvent(NET_DEBUG, "request: packet size expected %d bytes (received %d)\n", full_size - start, request_size);
+        logEvent(NET_DEBUG, "[%d][PGSQL] request: packet size expected %d bytes (received %d)\n",
+            iProxyId, full_size - start, request_size);
     }
 
     if(request_in.size())
@@ -154,22 +157,22 @@ bool PgSQLConnection::parseRequest(std::string & request, bool & hasResponse)
 
 void ErrorResponseHandling(const unsigned char * data,unsigned int start = 6)
 {
-    logEvent(V_DEBUG, "PGSQL ERROR RESPONSE command\n");
+    logEvent(V_DEBUG, "[*][PGSQL] ERROR RESPONSE command\n");
     std::string tmp;
     unsigned int len;
     tmp.append((const char*)data+start);
     if(!tmp.empty())
-        logEvent(SQL_DEBUG,"Error type: %s\n",tmp.c_str());
+        logEvent(SQL_DEBUG, "[*][PGSQL] Error type: %s\n",tmp.c_str());
     len = tmp.size()+start + 2;
     tmp ="";
     tmp.append((const char*)data+len);
     if(!tmp.empty())
-        logEvent(SQL_DEBUG,"Error number: %s\n",tmp.c_str());
+        logEvent(SQL_DEBUG, "[*][PGSQL] Error number: %s\n",tmp.c_str());
     len += tmp.size()+ 2;
     tmp ="";
     tmp.append((const char*)data+len);
     if(!tmp.empty())
-        logEvent(SQL_DEBUG,"Error name: %s\n",tmp.c_str());
+        logEvent(SQL_DEBUG,"[*][PGSQL] Error name: %s\n",tmp.c_str());
 }
 
 bool PgSQLConnection::parseResponse(std::string & response)
@@ -181,12 +184,13 @@ bool PgSQLConnection::parseResponse(std::string & response)
     size_t response_size;
     first_response = false;
 
-    logEvent(NET_DEBUG, "response: full size %d bytes\n", full_size); //-V111
+    logEvent(NET_DEBUG, "[%d][PGSQL] Parse Response: full size %d bytes\n", iProxyId, full_size); //-V111
     // logHex(VV_DEBUG, data, full_size);
 
     if (!( first_request || data[0] == PGSQL_SRV_PASSWORD_MESSAGE || data[0] == PGSQL_ERROR_RESPONSE || SecondPacket))
     {
-        if (full_size < 5) 
+        logEvent(VV_DEBUG, "[%d][PGSQL] READING RESULT-SET\n", iProxyId, full_size); //-V111
+        if (full_size < 5)
             return true;
             
         response_size = (data[1+start] << 24 | data[2+start] << 16 | data[3+start] << 8 | data[4+start]) + 1;
@@ -225,7 +229,8 @@ void PgSQLConnection::blockParseResponse(std::string & response)
     response.append(ready,8);
 }
 
-bool pg_parse_protocol_params(const unsigned char * data, size_t request_size, size_t & ind, const char * const option, unsigned char option_len, std::string & result)
+bool pg_parse_protocol_params(const unsigned char * data, size_t request_size, size_t & ind, 
+    const char * const option, unsigned char option_len, std::string & result)
 {
     if ((ind + option_len) > request_size) {
         ind = request_size;
@@ -258,7 +263,7 @@ bool PgSQLConnection::parse_request(const unsigned char * data, size_t request_s
 
     if (first_request)  {
         if (request_size < 13) {
-            logEvent(SQL_DEBUG,"PGSQL Unsupported protocol version\n");
+            logEvent(SQL_DEBUG,"[%d][PGSQL] Unsupported protocol version\n", iProxyId);
             logHex(SQL_DEBUG, data, 12);
             return false;
         }
@@ -266,7 +271,7 @@ bool PgSQLConnection::parse_request(const unsigned char * data, size_t request_s
         db_name.clear();
         db_user.clear();
 
-        logEvent(V_DEBUG, "PGSQL STARTUP MESSAGE command\n");
+        logEvent(V_DEBUG, "[%d][PGSQL] STARTUP MESSAGE command\n", iProxyId);
         //protocol version supporter 3.0
         proto_version.append((const char*)data + 4,2);
         proto_version.append('.', 1);
@@ -277,17 +282,17 @@ bool PgSQLConnection::parse_request(const unsigned char * data, size_t request_s
             switch (data[ind])  {
                 case 'u':
                     if (pg_parse_protocol_params(data, request_size, ind, "user", 4, db_user)) 
-                        logEvent(SQL_DEBUG, "USERNAME: %s\n", db_user.c_str());
+                        logEvent(SQL_DEBUG, "[%d][PGSQL] USERNAME: %s\n", iProxyId, db_user.c_str());
                     break;
                 case 'd':
                     if (pg_parse_protocol_params(data, request_size, ind, "database", 8, db_name)) {
-                        logEvent(SQL_DEBUG, "DATABASE: %s\n", db_name.c_str());
+                        logEvent(SQL_DEBUG, "[%d][PGSQL] DATABASE: %s\n", iProxyId, db_name.c_str());
                         // db = dbmap_find(iProxyId, db_name, "pgsql");
                     }
                     break;
                 case 'o':
                     if (pg_parse_protocol_params(data, request_size, ind, "options", 7, db_options)) {
-                        logEvent(SQL_DEBUG, "OPTIONS: %s\n", db_options.c_str());
+                        logEvent(SQL_DEBUG, "[%d][PGSQL] OPTIONS: %s\n", iProxyId, db_options.c_str());
                     }
                     break;
                 default:
@@ -305,45 +310,45 @@ bool PgSQLConnection::parse_request(const unsigned char * data, size_t request_s
     }
 
     if (request_size == 16 && memcmp(data, PGSQL_CANCEL, 8)) {
-        logEvent(SQL_DEBUG, "PGSQL CANCEL REQUEST command\n");
+        logEvent(SQL_DEBUG, "[%d][PGSQL] CANCEL REQUEST command\n", iProxyId);
         return true;
     }
 
     //simple messages
     switch(request_type)  {
         case PGSQL_PASSWORD:
-            logEvent(VV_DEBUG, "PGSQL Password Message\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] Password Message\n", iProxyId);
             SecondPacket = true;
             return true;
         case PGSQL_QUIT: 
-            logEvent(VV_DEBUG, "PGSQL QUIT command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] QUIT command\n", iProxyId);
             return true;
         case PGSQL_CLOSE: 
-            logEvent(VV_DEBUG, "PGSQL CLOSE command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] CLOSE command\n", iProxyId);
             return true;
         case PGSQL_COPY_DATA: 
-            logEvent(VV_DEBUG, "PGSQL COPY DATA backend command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] COPY DATA backend command\n", iProxyId);
             return true;
         case PGSQL_EXECUTE: 
-            logEvent(VV_DEBUG, "PGSQL EXECUTE command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] EXECUTE command\n", iProxyId);
             return true;
         case PGSQL_FLUSH: 
-            logEvent(VV_DEBUG, "PGSQL FLUSH command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] FLUSH command\n", iProxyId);
             return true;
         case PGSQL_FUNC_CALL: 
-            logEvent(VV_DEBUG, "PGSQL FUNCTION CALL command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] FUNCTION CALL command\n", iProxyId);
             return true;
         case PGSQL_SYNC:
-            logEvent(VV_DEBUG, "PGSQL SYNC command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] SYNC command\n", iProxyId);
             return true;
         case PGSQL_COPY_DONE:
-            logEvent(VV_DEBUG, "PGSQL COPY DONE frontend command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] COPY DONE frontend command\n", iProxyId);
             return true;
         case PGSQL_COPY_FAIL:
-            logEvent(VV_DEBUG, "PGSQL COPY FAIL command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] COPY FAIL command\n", iProxyId);
             return true;
         case PGSQL_DESCRIBE:
-            logEvent(VV_DEBUG, "PGSQL DESCRIBE command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] DESCRIBE command\n", iProxyId);
             return true;
     }
 
@@ -354,7 +359,7 @@ bool PgSQLConnection::parse_request(const unsigned char * data, size_t request_s
             longResponseData = false;
             original_query.clear();
             original_query.append((char *)data + 5);
-            logEvent(SQL_DEBUG, "QUERY command[%s]: %s\n", db_name.c_str(), original_query.c_str()); //-V111
+            logEvent(SQL_DEBUG, "[%d][PGSQL] QUERY command\n", iProxyId); //-V111
 
             if ( check_query(original_query) == false) {
                 // bad query - block it
@@ -371,68 +376,70 @@ bool PgSQLConnection::parse_request(const unsigned char * data, size_t request_s
             break;
 
         case PGSQL_BIND: {
-            logEvent(VV_DEBUG, "PGSQL BIND command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] BIND command\n", iProxyId);
             prepareName.append((char *)data + 5);
             if (!prepareName.empty())
-                logEvent(VV_DEBUG, "Destination portal name: \"%s\"\n",prepareName.c_str());
+                logEvent(VV_DEBUG, "[%d][PGSQL] Destination portal name: \"%s\"\n", iProxyId, prepareName.c_str());
             else
-                logEvent(VV_DEBUG, "Unnamed destination portal\n");
+                logEvent(VV_DEBUG, "[%d][PGSQL] Unnamed destination portal\n", iProxyId);
 
             original_query.clear();
             original_query.append((char *)data + strlen(prepareName.c_str())+6);
             if (!original_query.empty())
-                logEvent(VV_DEBUG, "Prepared statement name: \"%s\"\n", original_query.c_str());
+                logEvent(VV_DEBUG, "[%d][PGSQL] Prepared statement name: \"%s\"\n", iProxyId, original_query.c_str());
             else
-                logEvent(VV_DEBUG, "Unnamed prepared statement\n");
+                logEvent(VV_DEBUG, "[%d][PGSQL] Unnamed prepared statement\n", iProxyId);
             size_t ind = original_query.size() + 6;
             size_t parameterNum = (data[ind] << 8) | data[ind + 1]; //-V101
-            logEvent(SQL_DEBUG, "Number of parameter format codes: %d\n",parameterNum);
+            logEvent(SQL_DEBUG, "[%d][PGSQL] Number of parameter format codes: %d\n", iProxyId, parameterNum);
             ind += 2;
             for(size_t i=0; i < parameterNum;++i,ind++)
-                logEvent(SQL_DEBUG, "%d parameter format codes is: %s\n",i+1,data[ind]? "binary" : "text"); //-V111
+                logEvent(SQL_DEBUG, "[%d][PGSQL] %d parameter format codes is: %s\n", iProxyId, i+1,
+                    data[ind]? "binary" : "text"); //-V111
 
             if(parameterNum == 0)
                 ind++;
 
             parameterNum = data[ind] << 8 | data[ind + 1]; //-V101
-            logEvent(SQL_DEBUG, "Number of parameters needed by the query is: %d\n",parameterNum);
+            logEvent(SQL_DEBUG, "[%d][PGSQL] Number of parameters needed by the query is: %d\n", iProxyId, parameterNum);
             ind += 2;
             for(size_t i=0;i < parameterNum;++i) {
                 size_t num = (data[ind] << 24 | data[ind+1] << 16 | data[ind+2] << 8 | data[ind+3]) & 0xFFFFFFFF; //-V101
                 if (num == 0xFFFFFFFF) { // temp is null
-                    logEvent(SQL_DEBUG, "(%d) Value is: NULL\n",i+1);
+                    logEvent(SQL_DEBUG, "[%d][PGSQL] Binding(%d) Value is: NULL\n", iProxyId, i+1);
                     ind+= 4;
                     continue;
                 }
-                logEvent(SQL_DEBUG, "Length of the (%d) parameter value is: %d\n",i+1,num); //-V111
+                logEvent(SQL_DEBUG, "[%d][PGSQL] Length of the (%d) parameter value is: %d\n", iProxyId, i+1,num); //-V111
                 ind+=4;
                 ind += num;
             }
 
             parameterNum = data[ind] << 8 | data[ind + 1]; //-V101
-            logEvent(SQL_DEBUG, "number of result-column format codes is: %d\n",parameterNum); //-V111
+            logEvent(SQL_DEBUG, "[%d][PGSQL] Number of result-column format codes is: %d\n", iProxyId, parameterNum); //-V111
             ind += 2;
 
             for(size_t i=0;i < parameterNum;++i,ind++)
-                logEvent(SQL_DEBUG, "%d result-column format codes is: %s\n",i+1,data[ind]? "binary" : "text");
+                logEvent(SQL_DEBUG, "[%d][PGSQL] Binding(%d) result-column format codes is: %s\n", iProxyId, i+1,
+                    data[ind]? "binary" : "text");
 
             ind++;
             if(data[ind] == PGSQL_DESCRIBE)
-                logEvent(VV_DEBUG, "PGSQL DESCRIBE command\n");
+                logEvent(VV_DEBUG, "[%d][PGSQL] DESCRIBE command\n", iProxyId);
             if(data[ind] == PGSQL_EXECUTE)
-                logEvent(VV_DEBUG, "PGSQL EXECUTE command\n");
+                logEvent(VV_DEBUG, "[%d][PGSQL] EXECUTE command\n", iProxyId);
             if(data[ind] == PGSQL_SYNC)
-                logEvent(VV_DEBUG, "PGSQL SYNC command\n");
+                logEvent(VV_DEBUG, "[%d][PGSQL] SYNC command\n", iProxyId);
             } break;
 
         case PGSQL_PARSE:
             if(data[1] != 0) break;
-            logEvent(VV_DEBUG, "PGSQL PARSE command\n");
+            logEvent(VV_DEBUG, "[%d][PGSQL] PARSE command\n", iProxyId);
             prepareName.append((char *) data + 5);
-            logEvent(VV_DEBUG, "Prepared statement name: %s\n",prepareName.c_str());
+            logEvent(VV_DEBUG, "[%d][PGSQL] Prepared statement name: %s\n", iProxyId, prepareName.c_str());
             original_query.clear();
             original_query.append((char *) data + prepareName.size() + 6);
-            logEvent(VV_DEBUG, "Prepared query name: %s\n", original_query.c_str());
+            logEvent(VV_DEBUG, "[%d][PGSQL] Prepared query name: %s\n", iProxyId, original_query.c_str());
 
             if (check_query(original_query) == false) {
                 // bad query - block it
@@ -450,7 +457,7 @@ bool PgSQLConnection::parse_request(const unsigned char * data, size_t request_s
             break;
 
         default:
-            logEvent(SQL_DEBUG, "UNKNOWN COMMAND\n");
+            logEvent(SQL_DEBUG, "[%d][PGSQL] UNKNOWN COMMAND\n", iProxyId);
             logHex(SQL_DEBUG, data, request_size);
             break;
     }
@@ -467,7 +474,7 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
     ErrorType error_type = V_DEBUG;
 
     if (max_response_size < 3) {
-        logEvent(NET_DEBUG, "received %d bytes of response\n", max_response_size); //-V111
+        logEvent(NET_DEBUG, "[%d][PGSQL] received %d bytes of parser response\n", iProxyId, max_response_size); //-V111
         return false;
     }
 
@@ -477,20 +484,21 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
         type = data[start];
         response_size = data[1+start] << 24 | data[2+start] << 16 | data[3+start] << 8 | data[4+start];
         if((start + response_size+1) > max_response_size || response_size == 0) {
-            logEvent(NET_DEBUG, "response: more packets...\n");
+            logEvent(NET_DEBUG, "[%d][PGSQL] Parse Response: more packets...\n", iProxyId);
             return false;
         }
-        logEvent(NET_DEBUG, "packet size expected %d bytes (received %d)\n", max_response_size - start, response_size+1);
+        logEvent(NET_DEBUG, "[%d][PGSQL] Packet size expected %d bytes (received %d)\n", iProxyId,
+            max_response_size - start, response_size+1);
         switch(type) {
             case PGSQL_SRV_PASSWORD_MESSAGE: {
                 size_t auth = data[start + 4];
                 type = data[start + 8];
                 if(auth == PGSQL_AUTH_MD5 && type == 5)
-                    logEvent(V_DEBUG, "Client uses MD5 Password\n");
+                    logEvent(V_DEBUG, "[%d][PGSQL] Client uses MD5 Password\n", iProxyId);
                 else {
                     switch(type) {
                         case 0: {
-                            logEvent(VV_DEBUG, "response: PGSQL Authentication Ok\n");
+                            logEvent(VV_DEBUG, "[%d][PGSQL] response: Authentication Ok\n", iProxyId);
                             size_t type = data[start + 9];
                             if(type == 83) {
                                 ind = 0; //response_in.FindSubString("server_version");
@@ -501,81 +509,81 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
 
                             if(data[9] == PGSQL_EXECUTE) ErrorResponseHandling(data,start + 15);
                             } break;
-                        case 2:logEvent(V_DEBUG, "Client uses Kerberos V5 Password\n");break;
-                        case 3:logEvent(V_DEBUG, "Client uses Clear text Password\n");break;
-                        case 6:logEvent(V_DEBUG, "Client uses SCM Credential Password\n");break;
-                        case 7:logEvent(V_DEBUG, "Client uses GSS Password\n");break;
-                        case 9:logEvent(V_DEBUG, "Client uses SSPI Password\n");break;
-                        default:logEvent(V_DEBUG, "Client uses UNKNOWN Password type\n");break;
+                        case 2:logEvent(V_DEBUG, "[%d][PGSQL] Client uses Kerberos V5 Password\n", iProxyId);break;
+                        case 3:logEvent(V_DEBUG, "[%d][PGSQL] Client uses Clear text Password\n", iProxyId);break;
+                        case 6:logEvent(V_DEBUG, "[%d][PGSQL] Client uses SCM Credential Password\n", iProxyId);break;
+                        case 7:logEvent(V_DEBUG, "[%d][PGSQL] Client uses GSS Password\n", iProxyId);break;
+                        case 9:logEvent(V_DEBUG, "[%d][PGSQL] Client uses SSPI Password\n", iProxyId);break;
+                        default:logEvent(V_DEBUG, "[%d][PGSQL] Client uses UNKNOWN Password type\n", iProxyId);break;
                     }
                 }
                 } break;
             case PGSQL_SRV_GETROW:
-                logEvent(error_type, "response: PGSQL ROW DESCRIPTION command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: ROW DESCRIPTION command\n", iProxyId);
                 break;
             case PGSQL_ROW_DATA:
-                logEvent(error_type, "response: PGSQL ROW DATA command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: ROW DATA command\n", iProxyId);
                 break;
             case PGSQL_BECKEND_KEY_DATA: 
-                logEvent(error_type, "response: PGSQL BECKEND KEY DATA command\n");
-                logEvent(error_type, "Backend process ID: %u\n", data[5+start] << 24 | data[6+start] << 16 | data[7+start] << 8 | data[8+start]);
+                logEvent(error_type, "[%d][PGSQL] Parse Response: BECKEND KEY DATA command\n", iProxyId);
+                logEvent(error_type, "[%d][PGSQL] Backend process ID: %u\n", iProxyId, data[5+start] << 24 | data[6+start] << 16 | data[7+start] << 8 | data[8+start]);
                 break;
             case PGSQL_BIND_COMPLETE:
-                logEvent(error_type, "response: PGSQL BIND COMPLETE command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: BIND COMPLETE command\n", iProxyId);
                 break;
             case PGSQL_CLOSE_COMPLETE:
-                logEvent(error_type, "response: PGSQL CLOSE COMPLETE command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: CLOSE COMPLETE command\n", iProxyId);
                 break;
             case PGSQL_COMMAND_COMPLETE:
-                logEvent(error_type, "response: PGSQL COMPLETE command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: COMPLETE command\n", iProxyId);
                 break;
             case PGSQL_COPY_DATA: 
-                logEvent(error_type, "response: PGSQL COPY DATA frontend command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: COPY DATA frontend command\n", iProxyId);
                 break;
             case PGSQL_COPY_DONE:
-                logEvent(error_type, "response: PGSQL COPY DONE frontend command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: COPY DONE frontend command\n", iProxyId);
                 break;
             case PGSQL_COPY_IN_RESPONSE:
-                logEvent(error_type, "response: PGSQL COPY IN RESPONSE command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: COPY IN RESPONSE command\n", iProxyId);
                 break;
             case PGSQL_FLUSH:
-                logEvent(error_type, "response: PGSQL COPY OUT RESPONSE command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: COPY OUT RESPONSE command\n", iProxyId);
                 break;
             case PGSQL_EMPTY_QUERY_RESPONSE:
-                logEvent(error_type, "response: PGSQL EMPTY QUERY RESPONSE command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: EMPTY QUERY RESPONSE command\n", iProxyId);
                 break;
             case PGSQL_FUN_CALL_RESPONSE:
-                logEvent(error_type, "response: PGSQL FUNCTION CALL RESPONSE command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: FUNCTION CALL RESPONSE command\n", iProxyId);
                 break;
             case PGSQL_NO_DATA:
-                logEvent(error_type, "response: PGSQL NO DATA command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: NO DATA command\n", iProxyId);
                 break;
             case PGSQL_ERROR_RESPONSE:
             case PGSQL_NOTICE_RESPONSE:
                 if(type == PGSQL_NOTICE_RESPONSE)
-                    logEvent(error_type, "response: PGSQL NOTICE RESPONSE command\n");
+                    logEvent(error_type, "[%d][PGSQL] Parse Response: NOTICE RESPONSE command\n", iProxyId);
                 else {
-                    logEvent(error_type, "response: PGSQL ERROR RESPONSE command\n");
+                    logEvent(error_type, "[%d][PGSQL] Parse Response: ERROR RESPONSE command\n", iProxyId);
                     ErrorResponseHandling(data,start + 6);
                 }
                 break;
             case PGSQL_NOTIF_RESPONSE:
-                logEvent(error_type, "response: PGSQL NOTIFICATION RESPONSE command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: NOTIFICATION RESPONSE command\n", iProxyId);
                 break;
             case PGSQL_PARAM_STATUS:
-                logEvent(error_type, "response: PGSQL PARAMETER STATUS command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: PARAMETER STATUS command\n", iProxyId);
                 break;
             case PGSQL_PARSE_COMPLETE:
-                logEvent(error_type, "response: PGSQL PARSE COMPLETE command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: PARSE COMPLETE command\n", iProxyId);
                 break;
             case PGSQL_PORTAL_SUSPENDED:
-                logEvent(error_type, "response: PGSQL PORTAL SUSPENDED command\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: PORTAL SUSPENDED command\n", iProxyId);
                 break;
             case PGSQL_READY_FOR_QUERY:
-                logEvent(error_type, "response: Ready For Query\n");
+                logEvent(error_type, "[%d][PGSQL] Parse Response: Ready For Query\n", iProxyId);
                 break;
             default:
-                logEvent(error_type, "response: Unknown type: %d\n",type);
+                logEvent(error_type, "[%d][PGSQL] Parse Response: Unknown type: %d\n", iProxyId, type);
                 break;
         }
         start += response_size + 1;

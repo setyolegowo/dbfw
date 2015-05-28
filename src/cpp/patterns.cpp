@@ -109,10 +109,10 @@ bool SQLPatterns::Load(std::string & cfg_file)
     std::string temp;
 
     if (!file.is_open()) {
-        logEvent(CRIT, "Failed to load patterns file: %s\n", cfg_file.c_str());
+        logEvent(CRIT, "[*][SQLPatterns] Failed to load patterns file: %s\n", cfg_file.c_str());
         return false;
     }
-    logEvent(VV_DEBUG, "Loading patterns file: %s\n", cfg_file.c_str());
+    logEvent(VV_DEBUG, "[*][SQLPatterns] Loading patterns file: %s\n", cfg_file.c_str());
 
     std::string line = "";
     std::string section = "";
@@ -132,7 +132,7 @@ bool SQLPatterns::Load(std::string & cfg_file)
             end_section = line.find(']');
             //check if we found end of section
             if (end_section == 1 || end_section == std::string::npos) {
-                logEvent(CRIT, "Failed to parse following config line: %s\n", line.c_str());
+                logEvent(CRIT, "[*][SQLPatterns] Failed to parse following config line: %s\n", line.c_str());
                 return false;
             }
             section = line.substr(1, end_section-1);
@@ -143,7 +143,7 @@ bool SQLPatterns::Load(std::string & cfg_file)
             continue;
 
         if (section.size() == 0) {
-            logEvent(DEBUG, "Failed to parse following config line: %s . "
+            logEvent(DEBUG, "[*][SQLPatterns] Failed to parse following config line: %s . "
                 "Section is not specified.\n",
                        line.c_str());
             return false;
@@ -272,7 +272,7 @@ bool SQLPatterns::compile_pattern(std::string & str, pcre ** _re, pcre_extra ** 
     if (str.length() > 0) {
         *_re = pcre_compile(str.c_str(), PCRE_CASELESS, &error, &erroffset, NULL );
         if (_re == NULL) {
-            logEvent(CRIT, "Failed to compile the following pattern %s. Error %s",
+            logEvent(CRIT, "[*][SQLPatterns] Failed to compile the following pattern %s. Error %s",
                             str.c_str(), error);
             return false;
         }

@@ -81,9 +81,9 @@ bool DBFWConfig::load()
     std::string section = "";
     line.reserve(1024);
 
-    logEvent(DEBUG, "Loading config file: %s\n", cfg_file.c_str());
+    logEvent(DEBUG, "[*][Config] Loading config file: %s\n", cfg_file.c_str());
     if (!file.is_open()) {
-        logEvent(CRIT, "Failed to load configuration file: %s", cfg_file.c_str());
+        logEvent(CRIT, "[*][Config] Failed to load configuration file: %s", cfg_file.c_str());
         return false;
     }
 
@@ -104,7 +104,7 @@ bool DBFWConfig::load()
             size_t end_section = line.find(']');
             if (end_section == 1 || end_section == std::string::npos) {
                 //check if we found end of section
-                logEvent(DEBUG, "Failed to parse following config line: %s", line.c_str());
+                logEvent(DEBUG, "[*][Config] Failed to parse following config line: %s", line.c_str());
                 return false;
             }
             section = line.substr(1, end_section-1);
@@ -116,7 +116,7 @@ bool DBFWConfig::load()
         // key=value
         if (ParseConfLine(line, key, value) == false)
         {
-            logEvent(CRIT, "Failed to parse following configuration line: %s", line.c_str());
+            logEvent(CRIT, "[*][Config] Failed to parse following configuration line: %s", line.c_str());
             return false;
         }
         str_lowercase(key);
@@ -126,7 +126,7 @@ bool DBFWConfig::load()
         else if (section == "logging")  parse_log_setting (key, value);
         else if (section == "dbperm")  parse_perm_setting (key, value);
         else 
-            logEvent(DEBUG, "[*] No section for this key-value configuration: \"%s\"", line.c_str());
+            logEvent(DEBUG, "[*][Config] No section for this key-value configuration: \"%s\"", line.c_str());
     }
 
     return true;
@@ -148,7 +148,7 @@ bool DBFWConfig::parse_re_setting(std::string & key, std::string & value)
     else if (key == "risk_multiple_queries")  re_multiple_queries = atoi(value.c_str());
     else if (key == "risk bruteforce")        re_bruteforce = atoi(value.c_str());
     else 
-        logEvent(DEBUG, "[*] Parse ENGINE: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
+        logEvent(DEBUG, "[*][Config] Parse ENGINE: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
 
     return true;
 }
@@ -161,7 +161,7 @@ bool DBFWConfig::parse_log_setting(std::string & key, std::string & value)
     else if (key == "logrisk")  log_risk = value;
     else if (key == "logalert")  log_alert = value;
     else 
-        logEvent(DEBUG, "[*] Parse LOG: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
+        logEvent(DEBUG, "[*][Config] Parse LOG: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
 
     return true;
 }
@@ -171,7 +171,7 @@ bool DBFWConfig::parse_perm_setting(std::string & key, std::string & value)
     if (key == "port")      perm_port = atoi(value.c_str());
     else if (key == "host") perm_host = value;
     else 
-        logEvent(DEBUG, "[*] Parse DBPerm: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
+        logEvent(DEBUG, "[*][Config] Parse DBPerm: No section for this key-value configuration: \"%s=%s\"", key.c_str(), value.c_str());
 
     return true;
 }

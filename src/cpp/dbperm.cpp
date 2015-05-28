@@ -73,7 +73,7 @@ bool DBPerm::checkout(std::string& subject, std::string& action, std::string& ur
         std::map<int, time_t>::iterator it2 = _perm_static_time.find(it->second);
         time_t now = time(NULL);
         double diff_second = difftime(now, it2->second);
-        logEvent(V_DEBUG, "[%d] Different time: %f\n", it->second, diff_second);
+        logEvent(V_DEBUG, "DBPerm: %d => Different time: %f\n", it->second, diff_second);
         if(diff_second < MAX_INTERVAL) {
             std::map<int, std::string>::iterator it3 = _perm_static_result.find(it->second);
             return _parsingResult(it3->second.c_str(), it3->second.size());
@@ -98,7 +98,7 @@ bool DBPerm::oneCheckPermission(std::string& subject, std::string& action, std::
         std::map<int, time_t>::iterator it2 = _perm_static_time.find(it->second);
         time_t now = time(NULL);
         double diff_second = difftime(now, it2->second);
-        logEvent(V_DEBUG, "[%d] Different time: %f\n", it->second, diff_second);
+        logEvent(V_DEBUG, "DBPerm: %d => Different time: %f\n", it->second, diff_second);
         if(diff_second < MAX_INTERVAL) {
             std::map<int, std::string>::iterator it3 = _perm_static_result.find(it->second);
             return _parsingResult(it3->second.c_str(), it3->second.size());
@@ -115,7 +115,7 @@ bool DBPerm::_connect(std::string& buff)
     struct sockaddr_in serv_addr;
 
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        logEvent(NET_DEBUG, "Could not create socket in DBPerm\n");
+        logEvent(NET_DEBUG, "DBPerm: Could not create socket\n");
         return false;
     }
 
@@ -128,25 +128,26 @@ bool DBPerm::_connect(std::string& buff)
 
     if(inet_pton(AF_INET, cfg->perm_host.c_str(), &serv_addr.sin_addr)<=0) {
     // if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0) {
-        logEvent(NET_DEBUG, "inet_pton error occured in DBPerm\n");
+        logEvent(NET_DEBUG, "DBPerm: inet_pton error occured\n");
         return false;
     }
 
     if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
-            logEvent(NET_DEBUG, "Connect to backend DBPerm %d\n", sockfd);
+            logEvent(NET_DEBUG, "DBPerm: Connect to Inference Machine, sockfd=%d\n", sockfd);
         } else if (errno == EMFILE) {
-            logEvent(NET_DEBUG, "Failed to connect to DBPerm %d, too many open sockets\n", sockfd);
+            logEvent(NET_DEBUG, "DBPerm: Failed to connect to Inference Machine (%s:%d), too many open sockets\n",
+                cfg->perm_host.c_str(), cfg->perm_port);
             return false;
         } else {
-            logEvent(NET_DEBUG, "Failed to connect to DBPerm (%s:%d), sockfd=%d\n",
+            logEvent(NET_DEBUG, "DBPerm: Failed to connect to Inference Machine (%s:%d), sockfd=%d\n",
                 cfg->perm_host.c_str(), cfg->perm_port, sockfd);
             return false;
         }
     }
 
     if ((n = write(sockfd, buff.c_str(), buff.size())) <= 0) {
-        logEvent(NET_DEBUG, "[%d] Socket write error %d in DBPerm\n", sockfd, errno);
+        logEvent(NET_DEBUG, "DBPerm: Socket %d write error %d\n", sockfd, errno);
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS)
             n = 0;
         else
@@ -171,13 +172,13 @@ bool DBPerm::_connect(std::string& buff)
         }
         _parsingResult(_buff, n);
     } else if(n < 0) {
-        logEvent(NET_DEBUG, "Socket %d read error, errno=%d in DBPerm\n", sockfd, errno);
+        logEvent(NET_DEBUG, "DBPerm: Socket %d read error, errno=%d\n", sockfd, errno);
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
            return true;
         }
         return false;
     } else {
-        logEvent(NET_DEBUG, "Get 0 size in DBPerm\n");
+        logEvent(NET_DEBUG, "DBPerm: Get 0 size\n");
     }
 
     close(sockfd);

@@ -155,7 +155,7 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
     size_t db_name_len;
     size_t pwd_len = 0;
     std::string response;
-    logEvent(SQL_DEBUG, "---------------------Client packet %d--------------------------\n", packet_id);
+    logEvent(SQL_DEBUG, "---------------------[%d] Client packet %d--------------------------\n", iProxyId, packet_id);
 
     if (first_request == true) {
         if (request_size < 10)
@@ -165,15 +165,15 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
         unsigned int client_flags = (data[7] << 24 | data[6] << 16 | data[5] << 8 | data[4]); //-V112
 
         if (client_flags & MYSQL_CON_PROTOCOL_V41) {
-            logEvent(SQL_DEBUG, "Client uses protocol 4.1\n");
+            logEvent(SQL_DEBUG, "[%d][MySQL] Client uses protocol 4.1\n", iProxyId);
             mysql41 = true;
         }
         if (client_flags & MYSQL_CON_LONG_PWD)
-            logEvent(SQL_DEBUG, "Client uses LONG PWD\n");
+            logEvent(SQL_DEBUG, "[%d][MySQL] Client uses LONG PWD\n", iProxyId);
         if (client_flags & MYSQL_CON_COMPRESS)
-            logEvent(SQL_DEBUG, "Client uses traffic compression\n");
+            logEvent(SQL_DEBUG, "[%d][MySQL] Client uses traffic compression\n", iProxyId);
         if (client_flags & MYSQL_CON_SSL)
-            logEvent(SQL_DEBUG, "Client uses SSL encryption\n");
+            logEvent(SQL_DEBUG, "[%d][MySQL] Client uses SSL encryption\n", iProxyId);
 
         db_name.clear();
         db_user.clear();
@@ -182,14 +182,14 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
             if (user_len + 36 > request_size) {
                 user_len = request_size - 37;
                 db_user.append((const char*) data + 36, user_len);
-                logEvent(SQL_DEBUG, "USERNAME: %s\n", db_user.c_str()); //-V111
+                logEvent(SQL_DEBUG, "[%d][MySQL] USERNAME: %s\n", iProxyId, db_user.c_str()); //-V111
             } else {
                 //check if we have space for dnbame and pwd
                 if (user_len + 36 + 1 >= request_size)
                     return false;
 
                 db_user = (const char *) data + 36;
-                logEvent(SQL_DEBUG, "USERNAME: %s\n", db_user.c_str()); //-V111
+                logEvent(SQL_DEBUG, "[%d][MySQL] USERNAME: %s\n", iProxyId, db_user.c_str()); //-V111
 
                 size_t pwd_size = data[user_len + 36 + 1];
                 if (pwd_size == 0) {
@@ -199,7 +199,7 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
                             db_name_len = request_size-user_len - 36 - 3;
 
                         db_name.append((const char*) data + user_len + 36 + 2, db_name_len);
-                        logEvent(SQL_DEBUG, "DATABASE: %s\n", db_name.c_str());
+                        logEvent(SQL_DEBUG, "[%d][MySQL] DATABASE: %s\n", iProxyId, db_name.c_str());
                     }
                 } else if (user_len + 36 + pwd_size + 2 < request_size) {
                     db_name_len = strlen((const char*) data + user_len + 36 + pwd_size + 2);
@@ -207,7 +207,7 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
                         db_name_len = request_size-user_len-36-pwd_size-3;
 
                     db_name.append((const char *) data + user_len + 36 + pwd_size + 2, db_name_len);
-                    logEvent(SQL_DEBUG, "DATABASE: %s\n", db_name.c_str());
+                    logEvent(SQL_DEBUG, "[%d][MySQL] DATABASE: %s\n", iProxyId, db_name.c_str());
                 }
             }
         } else if (request_size > 10) {
@@ -217,7 +217,7 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
 
             if (user_len != 0) {
                 db_user.append((const char *) data + 9, user_len); 
-                logEvent(SQL_DEBUG, "USERNAME: %s\n", db_user.c_str());
+                logEvent(SQL_DEBUG, "[%d][MySQL] USERNAME: %s\n", iProxyId, db_user.c_str());
             }
 
             size_t temp= 9 + user_len + 1;
@@ -245,7 +245,7 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
 
             db_name.clear();
             db_name.append((const char*) data + temp, end - temp);
-            logEvent(SQL_DEBUG, "DATABASE: %s\n", db_name.c_str());
+            logEvent(SQL_DEBUG, "[%d][MySQL] DATABASE: %s\n", iProxyId, db_name.c_str());
         }
 
         first_request = false;
@@ -258,18 +258,18 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
 
     lastCommandId = (MySQLType)(int)(data[4]);
     if (type == MYSQL_QUERY || type == MYSQL_FIELD_LIST || type == MYSQL_PROCESS_INFO || type == MYSQL_STMT_FETCH) {
-        logEvent(SQL_DEBUG, "Long response is permitted\n");
+        logEvent(SQL_DEBUG, "[%d][MySQL] Long response is permitted\n", iProxyId);
         longResponse = true;
         longResponseData = false;
     }
 
     // we got command?
-    if (type == MYSQL_SLEEP)               logEvent(SQL_DEBUG, "MYSQL SLEEP command\n");
-    else if (type == MYSQL_QUIT)           logEvent(SQL_DEBUG, "MYSQL QUIT command\n");
+    if (type == MYSQL_SLEEP)               logEvent(SQL_DEBUG, "[%d][MySQL] SLEEP command\n", iProxyId);
+    else if (type == MYSQL_QUIT)           logEvent(SQL_DEBUG, "[%d][MySQL] QUIT command\n", iProxyId);
     else if (type == MYSQL_DB) {
         db_new_name.clear();
         db_new_name.append((const char *) data + 5, request_size - 5);
-        logEvent(SQL_DEBUG, "DATABASE: %s\n", db_new_name.c_str());
+        logEvent(SQL_DEBUG, "[%d][MySQL] DATABASE: %s\n", iProxyId, db_new_name.c_str());
     } else if (type == MYSQL_QUERY) {
         // query must not be empty
         // otherwise system can crash
@@ -318,11 +318,11 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
 
             hasResponse = true;
         }
-    } else if (type == MYSQL_REFRESH)      logEvent(SQL_DEBUG, "MYSQL FLUSH command\n");
-    else if (type == MYSQL_SHUTDOWN)       logEvent(SQL_DEBUG, "MYSQL SHUTDOWN command\n");
-    else if (type == MYSQL_STATISTICS)     logEvent(SQL_DEBUG, "MYSQL get statistics command\n");
+    } else if (type == MYSQL_REFRESH)      logEvent(SQL_DEBUG, "[%d][MySQL] FLUSH command\n", iProxyId);
+    else if (type == MYSQL_SHUTDOWN)       logEvent(SQL_DEBUG, "[%d][MySQL] SHUTDOWN command\n", iProxyId);
+    else if (type == MYSQL_STATISTICS)     logEvent(SQL_DEBUG, "[%d][MySQL] get statistics command\n", iProxyId);
     else if (type == MYSQL_PROCESS_INFO) {
-        logEvent(SQL_DEBUG, "MYSQL PROCESSLIST command\n");
+        logEvent(SQL_DEBUG, "[%d][MySQL] PROCESSLIST command\n", iProxyId);
         original_query = "show processlist";
         start_response = true;
         if ( check_query(original_query) == false) {
@@ -338,14 +338,14 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
 
             hasResponse = true;
         }
-    } else if (type == MYSQL_CONNECT)      logEvent(SQL_DEBUG, "MYSQL CONNECT command\n");
+    } else if (type == MYSQL_CONNECT)      logEvent(SQL_DEBUG, "[%d][MySQL] CONNECT command\n", iProxyId);
     else if (type == MYSQL_KILL && request_size >= 8) {
         unsigned int process_id = (data[8] << 24 | data[7]<<16 | data[6] << 8 | data[5]);
-        logEvent(SQL_DEBUG, "MYSQL KILL %u command\n", process_id);
-    } else if (type == MYSQL_DEBUG)        logEvent(SQL_DEBUG, "MYSQL DEBUG command\n");
-    else if (type == MYSQL_PING)           logEvent(SQL_DEBUG, "MYSQL PING command\n");
-    else if (type == MYSQL_INT_TIME)       logEvent(SQL_DEBUG, "MYSQL TIME command\n");
-    else if (type == MYSQL_DELAYED_INSERT) logEvent(SQL_DEBUG, "MYSQL DELAYED INSERT command\n");
+        logEvent(SQL_DEBUG, "[%d][MySQL] KILL %u command\n", iProxyId, process_id);
+    } else if (type == MYSQL_DEBUG)        logEvent(SQL_DEBUG, "[%d][MySQL] DEBUG command\n", iProxyId);
+    else if (type == MYSQL_PING)           logEvent(SQL_DEBUG, "[%d][MySQL] PING command\n", iProxyId);
+    else if (type == MYSQL_INT_TIME)       logEvent(SQL_DEBUG, "[%d][MySQL] TIME command\n", iProxyId);
+    else if (type == MYSQL_DELAYED_INSERT) logEvent(SQL_DEBUG, "[%d][MySQL] DELAYED INSERT command\n", iProxyId);
     else if (type == MYSQL_CHANGE_USER) {
         max_user_len = 255;
         if (request_size - 5 < max_user_len)
@@ -377,11 +377,11 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
             }
         }
         // then we have a password
-        logEvent(SQL_DEBUG, "MYSQL CHANGE USER command\n");
-    } else if (type == MYSQL_REPL_BINLOG_DUMP)   logEvent(SQL_DEBUG, "MYSQL REPL BINLOG DUMP command\n");
-    else if (type == MYSQL_REPL_TABLE_DUMP)      logEvent(SQL_DEBUG, "MYSQL REPL TABLE DUMP command\n");
-    else if (type == MYSQL_REPL_CONNECT_OUT)     logEvent(SQL_DEBUG, "MYSQL REPL CONNECT OUT command\n");
-    else if (type == MYSQL_REPL_REGISTER_SLAVE)  logEvent(SQL_DEBUG, "MYSQL REPL REGISTER SLAVE command\n");
+        logEvent(SQL_DEBUG, "[%d][MySQL] CHANGE USER command\n", iProxyId);
+    } else if (type == MYSQL_REPL_BINLOG_DUMP)   logEvent(SQL_DEBUG, "[%d][MySQL] REPL BINLOG DUMP command\n", iProxyId);
+    else if (type == MYSQL_REPL_TABLE_DUMP)      logEvent(SQL_DEBUG, "[%d][MySQL] REPL TABLE DUMP command\n", iProxyId);
+    else if (type == MYSQL_REPL_CONNECT_OUT)     logEvent(SQL_DEBUG, "[%d][MySQL] REPL CONNECT OUT command\n", iProxyId);
+    else if (type == MYSQL_REPL_REGISTER_SLAVE)  logEvent(SQL_DEBUG, "[%d][MySQL] REPL REGISTER SLAVE command\n", iProxyId);
     else if (type == MYSQL_STMT_PREPARE) {
         if (data[5] == '\0')
             return true;
@@ -389,7 +389,7 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
         size_t max_query_len = request_size - 5;
         original_query.clear();
         original_query.append((const char *) data + 5, max_query_len);
-        logEvent(SQL_DEBUG, "MYSQL PREPARE QUERY[%s]: %s\n", db_name.c_str(), original_query.c_str()); //-V111
+        logEvent(SQL_DEBUG, "[%d][MySQL] PREPARE QUERY\n", iProxyId); //-V111
         start_response = true;
 
         if ( check_query(original_query) == false) {
@@ -407,21 +407,21 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
         }
     } else if (type == MYSQL_STMT_EXEC) {
         size_t statement_id = (data[8] << 24 | data[7]<<16 | data[6] << 8 | data[5]); //-V101
-        logEvent(SQL_DEBUG, "MYSQL STMT EXECUTE: %u\n", statement_id); //-V111
-    } else if (type == MYSQL_LONG_DATA)    logEvent(SQL_DEBUG, "MYSQL LONG DATA command\n");
+        logEvent(SQL_DEBUG, "[%d][MySQL] STMT EXECUTE: %u\n", iProxyId, statement_id); //-V111
+    } else if (type == MYSQL_LONG_DATA)    logEvent(SQL_DEBUG, "[%d][MySQL] LONG DATA command\n", iProxyId);
     else if (type == MYSQL_STMT_CLOSE) {
         size_t statement_id = (data[8] << 24 | data[7]<<16 | data[6] << 8 | data[5]); //-V101
-        logEvent(SQL_DEBUG, "MYSQL STMT CLOSE: %u\n", statement_id);
+        logEvent(SQL_DEBUG, "[%d][MySQL] STMT CLOSE: %u\n", iProxyId, statement_id);
     } else if (type == MYSQL_STMT_RESET) {
         size_t statement_id = (data[8] << 24 | data[7]<<16 | data[6] << 8 | data[5]); //-V101
-        logEvent(SQL_DEBUG, "MYSQL STMT RESET: %u\n", statement_id); //-V111
-    } else if (type == MYSQL_SET_OPTION)   logEvent(SQL_DEBUG, "MYSQL SET OPTION command\n");
+        logEvent(SQL_DEBUG, "[%d][MySQL] STMT RESET: %u\n", iProxyId, statement_id); //-V111
+    } else if (type == MYSQL_SET_OPTION)   logEvent(SQL_DEBUG, "[%d][MySQL] SET OPTION command\n", iProxyId);
     else if (type == MYSQL_STMT_FETCH) {
         size_t statement_id = (data[8] << 24 | data[7]<<16 |  //-V101
             data[6] << 8 | data[5]);
-        logEvent(SQL_DEBUG, "MYSQL STMT FETCH: %u\n", statement_id); //-V111
+        logEvent(SQL_DEBUG, "[%d][MySQL] STMT FETCH: %u\n", iProxyId, statement_id); //-V111
     } else {
-        logEvent(SQL_DEBUG, "UNKNOWN COMMAND\n");
+        logEvent(SQL_DEBUG, "[%d][MySQL] UNKNOWN COMMAND\n", iProxyId);
         logHex(SQL_DEBUG, data, request_size);   
     }
 
@@ -443,7 +443,7 @@ bool MySQLConnection::parseResponse(std::string & response)
     std::map<std::string, std::string>::iterator it_map;
     // size_t header_size;
     if (full_size < 5) {
-       logEvent(NET_DEBUG, "received %d bytes of response\n", full_size);
+       logEvent(NET_DEBUG, "[%d][MySQL] received %d bytes of parse response\n", iProxyId, full_size);
        return false;
     }
     const unsigned char * data = response_in.raw();
@@ -453,12 +453,12 @@ bool MySQLConnection::parseResponse(std::string & response)
     unsigned int packet_id = data[3];
     // unsigned int type = data[4];
 
-    logEvent(SQL_DEBUG, "server packet   : %d\n", packet_id);
+    logEvent(SQL_DEBUG, "[%d][MySQL] server packet   : %d\n", iProxyId, packet_id);
     // logEvent(SQL_DEBUG, "last command id : %d\n", lastCommandId);
     if (!((start_response && data[4] == MYSQL_SRV_ERROR) || lastCommandId == MYSQL_DB || first_request || SecondPacket)) { //-V112
         number_of_fields = data[4];
         state = 0;
-        logEvent(V_DEBUG, "Number of fields: %d\n", number_of_fields);
+        logEvent(V_DEBUG, "[%d][MySQL] Number of fields: %d\n", iProxyId, number_of_fields);
         while((start + response_size) <= full_size) {
             if(start > 0 && lastCommandId == MYSQL_QUERY) {
                 if(state < number_of_fields) {
@@ -540,21 +540,21 @@ bool MySQLConnection::parseResponse(std::string & response)
             return true;
         }
 
-        logEvent(NET_DEBUG, "response: received %d bytes of response\n", full_size); //-V111
+        logEvent(NET_DEBUG, "[%d][MySQL] Parse Response: received %d bytes\n", iProxyId, full_size); //-V111
         logHex(NET_DEBUG, data, full_size);
 
         return false;
     }
 
     response_size = (data[2]<<16 | data[1] << 8 | data[0]) + 4;
-    logEvent(V_DEBUG, "START : RESPONSE SIZE : FULL SIZE => [%d : %d : %d]\n", start, response_size, full_size);
+    // logEvent(V_DEBUG, "START : RESPONSE SIZE : FULL SIZE => [%d : %d : %d]\n", start, response_size, full_size);
     while(start + response_size <= full_size)
     {
         size_t header_size = 0;
 
         // request's equivalent response
         if(!ParseResponsePacket(data + start,response_size,full_size - start,response,header_size)) {
-            logEvent(NET_DEBUG, "response: more packets...\n");
+            logEvent(NET_DEBUG, "[%d][MySQL] Parse Response: more packets...\n", iProxyId);
             if(SecondPacket)
                 SecondPacket = false;
             return true;
@@ -584,10 +584,10 @@ bool MySQLConnection::ParseResponsePacket(const unsigned char* data, size_t& res
 {
     unsigned int packet_id = data[3];
     unsigned int type = data[4];
-    logEvent(SQL_DEBUG, "server packet %d\n", packet_id);
+    logEvent(SQL_DEBUG, "[%d][MySQL] server packet %d\n", iProxyId, packet_id);
     if (first_request == true && response_size > 23 && response_size <= max_response_size) {
         //loghex(NET_DEBUG,data,max_response_size);
-        logEvent(SQL_DEBUG, "first server packet \n");
+        logEvent(SQL_DEBUG, "[%d][MySQL] first server packet\n", iProxyId);
         //unsigned int protocol_version = data[5];
         size_t max_srv_len = response_size - 5;
         size_t srv_len = strlen((const char*) data + 5);
@@ -609,15 +609,17 @@ bool MySQLConnection::ParseResponsePacket(const unsigned char* data, size_t& res
 
         response_in.pop(response,response_size);
         if (server_flags & MYSQL_CON_PROTOCOL_V41)
-            logEvent(SQL_DEBUG, "Server supports protocol 4.1\n");
+            logEvent(SQL_DEBUG, "[%d][MySQL] Server supports protocol 4.1\n", iProxyId);
 
         // we will disable compression and SSL support
         if (server_flags & MYSQL_CON_COMPRESS) {
-            logEvent(NET_DEBUG, "Disable mysql server traffic compression capability as database firewall does not supports it.\n");
+            logEvent(NET_DEBUG, "[%d][MySQL] Disable mysql server traffic compression capability as database firewall does not supports it.\n",
+                iProxyId);
             server_flags = server_flags & ( ~ (unsigned int)(MYSQL_CON_COMPRESS));
         }
         if (server_flags & MYSQL_CON_SSL) {
-            logEvent(NET_DEBUG, "Disable mysql SSL traffic encryption as database firewall does not supports it.\n");
+            logEvent(NET_DEBUG, "[%d][MySQL] Disable mysql SSL traffic encryption as database firewall does not supports it.\n",
+                iProxyId);
             server_flags = server_flags & ( ~ (unsigned int)(MYSQL_CON_SSL));
         }
 
@@ -640,7 +642,7 @@ bool MySQLConnection::ParseResponsePacket(const unsigned char* data, size_t& res
         if (error_len > 0) {
             std::string full_error = "";
             full_error.append((const char*) data + 7, error_len);
-            logEvent(SQL_DEBUG, "SQL_ERROR: %s\n", full_error.c_str());
+            logEvent(SQL_DEBUG, "[%d][MySQL] SQL_ERROR: %s\n", iProxyId, full_error.c_str());
             if(!cfg->re_return_sql_error) {
                 blockResponse(response);
                 response_in.chop_back(response_in.size());
@@ -659,7 +661,7 @@ bool MySQLConnection::ParseResponsePacket(const unsigned char* data, size_t& res
     }
     // could happen when using "SET command"
     if (type == MYSQL_SRV_OK && response_size > 7 && response_size < 600 && response_size <= max_response_size) {
-        logEvent(SQL_DEBUG, "OK packet \n");
+        logEvent(SQL_DEBUG, "[%d][MySQL] OK packet \n", iProxyId);
         return true;
     }
 

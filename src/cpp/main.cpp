@@ -67,7 +67,7 @@ int main (int argc, char** argv)
     ev::default_loop loop;
 
     if (proxyMapInit() == false) {
-        logEvent(DEBUG, "Failed to open all server sockets, closing application\n");
+        logEvent(DEBUG, "[*] Failed to open all server sockets, closing application\n");
         exit(0);
     }
 
@@ -78,7 +78,7 @@ int main (int argc, char** argv)
     proxyMapClose();
     DBFWConfig::free();
 
-    logEvent(DEBUG, "Application closed\n\n");
+    logEvent(DEBUG, "[*] Application closed\n\n");
     logClose();
 
     return 0;
@@ -118,7 +118,7 @@ int initLinux()
 
 void killer(int)
 {
-    logEvent(CRIT, "Killer fired\n");
+    logEvent(CRIT, "[*] Killer fired\n");
     DBFWConfig * cfg = DBFWConfig::getInstance();
     cfg->server_running = false;
 }
