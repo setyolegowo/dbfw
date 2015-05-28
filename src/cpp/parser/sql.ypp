@@ -106,7 +106,7 @@ select_cmd:
             | SELECT select_options select_exps { $$=$3; clb_found_action("select"); }
             ;
 
-insert_cmd:   INSERT INTO { clb_found_action("insert"); }
+insert_cmd:   INSERT INTO table_references insert_options { clb_found_action("insert"); }
             ;
 
 show_cmd:     SHOW { clb_found_action("show"); }
@@ -127,7 +127,11 @@ select_opts:  SELECT_OPT
             | DISTINCT
             | select_opts SELECT_OPT
             | select_opts DISTINCT
-        ;
+            ;
+
+insert_options: /* empty */
+            | O_BRACE select_exps C_BRACE
+            ;
 
 delete_option_list: /* empty */
             | delete_option
