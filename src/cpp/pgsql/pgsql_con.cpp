@@ -9,6 +9,7 @@
 
 #include "../config.hpp"
 // #include "../dbmap.hpp"
+#include "../dbperm.hpp"
 #include "../misc.hpp" // for str_lowercase
 #include "../normalization.hpp"
 
@@ -16,6 +17,7 @@ static SQLPatterns pgsql_patterns;
 static unsigned char PGSQL_CANCEL[] = {0x00, 0x00, 0x00, 0x0F, 0x04, 0xD2, 0x16, 0xDF};
 static bool pg_parse_protocol_params(const unsigned char * data, size_t request_size, size_t & ind, const char * const option, unsigned char option_len, std::string & result);
 static void pg_parse_string(const unsigned char * data, size_t start, size_t & offset, std::string & buff);
+static void maskResult(size_t data_pos, size_t data_length, Buffer& output);
 
 bool pgsql_patterns_init(std::string & path)
 {
@@ -189,7 +191,7 @@ bool PgSQLConnection::parseResponse(std::string & response)
     // logHex(VV_DEBUG, data, full_size);
 
     if (!( first_request || data[0] == PGSQL_SRV_PASSWORD_MESSAGE || data[0] == PGSQL_ERROR_RESPONSE ||
-        SecondPacket)) // data[0] == PGSQL_SRV_GETROW 
+        data[0] == PGSQL_SRV_GETROW || SecondPacket))
     {
         // logEvent(VV_DEBUG, "[%d][PGSQL] READING RESULT-SET. TYPE=%d(0x%x)\n", iProxyId, data[0], data[0]); //-V111
         if (full_size < 5)
@@ -484,6 +486,10 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
     }
 
     std::string str_value;
+    DBPerm perm;
+    bool check_row = false;
+    size_t field_count = 0;
+    std::vector<std::string> mask_vector;
     while(start + 4 < max_response_size)
     {
         type = data[start];
@@ -525,19 +531,61 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
                 } break;
             case PGSQL_SRV_GETROW: {
                 logEvent(error_type, "[%d][PGSQL] Parse Response: ROW DESCRIPTION command\n", iProxyId);
-                size_t field_count = data[5+start] << 8 | data[6+start];
-                size_t offset = 7;
+                if(sql_tabel.size() > 0) {
+                    std::size_t found = sql_tabel.find(' ');
+                    if(found == std::string::npos) {
+                        field_count = data[5+start] << 8 | data[6+start];
+                        size_t offset = 7;
 
-                logEvent(VV_DEBUG, "[%d][PGSQL] Field Size: %d\n", iProxyId, field_count);
-                while(start+offset < start + response_size) { //-V112
-                    pg_parse_string(data, start, offset, str_value);
-                    logEvent(VV_DEBUG, "[%d][PGSQL] Get Field Name: %s\n", iProxyId, str_value.c_str());
-                    offset+=18;
+                        logEvent(VV_DEBUG, "[%d][PGSQL] Field Size: %d\n", iProxyId, field_count);
+                        while(start+offset < start + response_size) { //-V112
+                            pg_parse_string(data, start, offset, str_value);
+                            logEvent(VV_DEBUG, "[%d][PGSQL] Get Field Name: %s\n", iProxyId, str_value.c_str());
+                            perm.addAttr(str_value);
+                            mask_vector.push_back(str_value);
+                            offset+=18;
+                        }
+                        std::string uri_resource = itoa(iProxyId);
+                        uri_resource.append("/"); uri_resource.append(db_name);
+                        uri_resource.append("/"); uri_resource.append(sql_tabel);
+                        perm.checkout(db_user, sql_action, uri_resource);
+                        if(perm.error_result) {
+                            logRisk(ERR, "[%d][PGSQL] Permission ERROR.  DB:%s, ACTION:%s, RESOURCE:%s\n",
+                                iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
+                        } else
+                            check_row = true;
+                    } else {
+                        logRisk(ERR, "[%d] Permission Check Failed. The query uses more than one table: %s\n",
+                            iProxyId, sql_tabel.c_str());
+                    }
+                } else {
+                    logRisk(ERR, "[%d] Permission Check Failed. Table size is zero.\n", iProxyId);
                 }
                 } break;
-            case PGSQL_ROW_DATA:
+            case PGSQL_ROW_DATA: {
                 logEvent(error_type, "[%d][PGSQL] Parse Response: ROW DATA command\n", iProxyId);
-                break;
+                if(check_row == true && field_count > 0) {
+                    size_t data_length = 0;
+                    size_t offset = 7;
+                    field_count = data[5+start] << 8 | data[6+start];
+                    std::map<std::string, unsigned char>::iterator pointer;
+                    for(size_t i=0; i < field_count; i++) {
+                        data_length = data[offset+start] << 24 | data[1+offset+start] << 16 | 
+                            data[2+offset+start] << 8 | data[3+offset+start];
+                        offset+=4;
+                        if(data_length == 0xFFFFFFFF) continue;
+                        try {
+                            pointer = perm.mask_map.find(mask_vector[i]);
+                            if(pointer != perm.mask_map.end() && pointer->second == 1)
+                                maskResult(start + offset, data_length, response_in);
+                        } catch (const std::out_of_range& oor) {
+                            logEvent(ERR, "[%d][PGSQL] Out of Range error: %s\n", oor.what());
+                            break;
+                        }
+                        offset+=data_length;
+                    }
+                }
+                } break;
             case PGSQL_BECKEND_KEY_DATA: 
                 logEvent(error_type, "[%d][PGSQL] Parse Response: BECKEND KEY DATA command\n", iProxyId);
                 logEvent(error_type, "[%d][PGSQL] Backend process ID: %u\n", iProxyId, data[5+start] << 24 | data[6+start] << 16 | data[7+start] << 8 | data[8+start]);
@@ -616,4 +664,9 @@ void pg_parse_string(const unsigned char * data, size_t start, size_t & offset, 
     buff.clear();
     buff.append((const char *) data + start + offset, offset_tmp-offset);
     offset = offset_tmp + 1;
+}
+void maskResult(size_t data_pos, size_t data_length, Buffer& output)
+{
+    for(size_t i = data_pos; i < data_pos + data_length; i++)
+        output.replaceChar(i, '*');
 }

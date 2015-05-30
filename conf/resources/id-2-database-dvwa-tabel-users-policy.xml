@@ -36,7 +36,7 @@
                <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">user_id</AttributeValue>
                <!--<AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">first_name</AttributeValue>
                <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">last_name</AttributeValue>-->
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">user</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">username</AttributeValue>
                <!--<AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">password</AttributeValue>
                <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">avatar</AttributeValue>-->
             </Apply>
