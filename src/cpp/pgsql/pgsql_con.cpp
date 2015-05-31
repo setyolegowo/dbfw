@@ -472,6 +472,7 @@ bool PgSQLConnection::parse_request(const unsigned char * data, size_t request_s
 
 bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_size,size_t& max_response_size, std::string & response)
 {
+    bool retval = true;
     unsigned int type;
     size_t start=0;
     size_t response_size;
@@ -621,14 +622,22 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
                 logEvent(error_type, "[%d][PGSQL] Parse Response: NO DATA command\n", iProxyId);
                 break;
             case PGSQL_ERROR_RESPONSE:
-            case PGSQL_NOTICE_RESPONSE:
+            case PGSQL_NOTICE_RESPONSE: {
                 if(type == PGSQL_NOTICE_RESPONSE)
                     logEvent(error_type, "[%d][PGSQL] Parse Response: NOTICE RESPONSE command\n", iProxyId);
                 else {
+                    DBFWConfig * cfg = DBFWConfig::getInstance();
                     logEvent(error_type, "[%d][PGSQL] Parse Response: ERROR RESPONSE command\n", iProxyId);
                     ErrorResponseHandling(data,start + 6);
+                    if(!cfg->re_return_sql_error) {
+                        blockResponse(response);
+                        response_in.chop_back(response_in.size());
+                        data = response_in.raw();
+                        start = max_response_size - response_size - 1;
+                        retval = false;
+                    }
                 }
-                break;
+                }break;
             case PGSQL_NOTIF_RESPONSE:
                 logEvent(error_type, "[%d][PGSQL] Parse Response: NOTIFICATION RESPONSE command\n", iProxyId);
                 break;
@@ -655,7 +664,7 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
 
     if(SecondPacket) SecondPacket = false;
 
-    return true;
+    return retval;
 }
 void pg_parse_string(const unsigned char * data, size_t start, size_t & offset, std::string & buff)
 {

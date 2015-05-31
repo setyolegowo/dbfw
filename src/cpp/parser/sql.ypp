@@ -30,6 +30,7 @@ static void cmp_fn(Expression * xp1, Expression * xp2);
 %token USE ON USING IGNORE FORCE FOR
 %token QUICK LOW_PRIORITY
 %token GROUP
+%token ALTER DROP
 %token ORDER BY
 %token ASC DESC
 %token INSERT UPDATE DELETE SHOW
@@ -99,6 +100,8 @@ command:
         | show_cmd
         | delete_cmd
         | update_cmd
+        | alter_cmd
+        | drop_cmd
         ;
 
 select_cmd:
@@ -110,6 +113,12 @@ insert_cmd:   INSERT INTO table_references insert_options { clb_found_action("in
             ;
 
 show_cmd:     SHOW { clb_found_action("show"); }
+            ;
+
+alter_cmd:    ALTER { clb_found_action("alter"); }
+            ;
+
+drop_cmd:     DROP { clb_found_action("drop"); }
             ;
 
 delete_cmd:   DELETE delete_option_list delete_table_list FROM table_references where_cond order_cond limit_cond end_cond { clb_found_action("delete"); }

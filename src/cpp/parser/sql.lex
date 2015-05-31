@@ -16,6 +16,8 @@ insert      return INSERT;
 update      return UPDATE;
 delete      return DELETE;
 show        return SHOW;
+alter       return ALTER;
+drop        return DROP;
 
 distinctrow         return SELECT_OPT;
 distinct            return DISTINCT;
@@ -147,7 +149,7 @@ b[ \t\v\f\r\n\xA0]*'[0-9]+'   { yylval.int_val = 3; return INTEGER; }
 
 [0-9]+      {  yylval.int_val = atoi(yytext);
                return INTEGER;
-	    }
+        }
 
 version\([ \t\v\f\r\n\xA0]*\) {
               std::string version = "version";
@@ -188,14 +190,14 @@ with[ \t\v\f\r\n\xA0]+rollup ; // group by modifier
 
 [a-z_][a-z0-9\._]* {
                yylval.str_val = new SQLString(yytext);
-	       return STRING;
+           return STRING;
             }
 
-	    
+        
 @[a-z0-9\.]+ {
                yylval.int_val = strlen(yytext);
-	       return VARIABLE;
-	    }
+           return VARIABLE;
+        }
 
 "="           return EQUAL;
 "<=>"         return EQUAL;
