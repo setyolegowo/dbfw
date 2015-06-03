@@ -78,9 +78,6 @@ public class ConnectionManager implements Runnable {
     }
     
     public static void main(String[] args) {
-        log.info("TEST LOG. HAHAHAHA");
-        log.debug("DEBUG TEST LOG. HAHAHAHA");
-        log.error("ERROR TEST LOG. HAHAHAHA");
         DBFWContextHandler.initBalana();
         ConnectionManager server = new ConnectionManager();
         new Thread(server).start();
