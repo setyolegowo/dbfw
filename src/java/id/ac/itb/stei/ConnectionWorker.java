@@ -42,12 +42,12 @@ public class ConnectionWorker implements Runnable {
                 String message = new String(buffer).substring(0, charsRead);
                 String[] msg = message.split(" ");
                 log.info("msg :" + message);
-                if(msg.length < 3)
+                if(msg.length < 4)
                     error = true;
                 else {
-                    dbfw = new DBFWContextHandler(msg[0], msg[1], msg[2]);
-                    dbfw.setIpclient(clientSocket.getRemoteSocketAddress().toString());
-                    for(int i=3; i < msg.length; i++){
+                    dbfw = new DBFWContextHandler(msg[0], msg[2], msg[3]);
+                    dbfw.setIpclient(msg[1]);
+                    for(int i=4; i < msg.length; i++){
                         dbfw.addColumn(msg[i]);
                     }
                 }
@@ -56,11 +56,11 @@ public class ConnectionWorker implements Runnable {
                     dbfw.run();
                     try (OutputStream output = clientSocket.getOutputStream()) {
                         output.write(("1 " + dbfw.getResult()).getBytes());
-                        log.error("msg : " + dbfw.getResult());
+                        log.info("1 " + dbfw.getResult());
                     }
                 } else {
                     try (OutputStream output = clientSocket.getOutputStream()) {
-                        log.error("0 ERROR".getBytes());
+                        log.info("0 ERROR".getBytes());
                     }
                 }
             }

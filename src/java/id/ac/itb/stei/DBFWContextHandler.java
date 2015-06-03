@@ -224,7 +224,7 @@ public final class DBFWContextHandler {
         try{
             // using file based policy repository. so set the policy location as system property
             String policyLocation = (new File(".")).getCanonicalPath() + File.separator + "conf" + File.separator + "resources";
-            log.info(policyLocation);
+            log.info("Policy repository: " + policyLocation);
             System.setProperty(FileBasedPolicyFinderModule.POLICY_DIR_PROPERTY, policyLocation);
         } catch (IOException e) {
             log.error("Can not locate policy repository\n" + e);
