@@ -37,12 +37,14 @@ static std::map<int, std::string> _perm_static_result;
 DBPerm::DBPerm()
 {
     error_result = true;
+    ipaddress = "0.0.0.0";
     attr_list.clear();
     mask_map.clear();
 }
 
 DBPerm::~DBPerm()
 {
+    ipaddress.clear();
     attr_list.clear();
     mask_map.clear();
 }
@@ -53,11 +55,19 @@ bool DBPerm::addAttr(std::string& attr)
     return true;
 }
 
+bool DBPerm::setIP(std::string& ip)
+{
+	ipaddress.assign(ip);
+	return true;
+}
+
 bool DBPerm::checkout(std::string& subject, std::string& action, std::string& uri)
 {
     std::string buf;
     std::string temp = " ";
     buf.append(subject);
+    buf.append(temp.c_str(), 1);
+    buf.append(ipaddress);
     buf.append(temp.c_str(), 1);
     buf.append(action);
     buf.append(temp.c_str(), 1);
@@ -87,6 +97,8 @@ bool DBPerm::oneCheckPermission(std::string& subject, std::string& action, std::
     std::string buf;
     std::string temp = " ";
     buf.append(subject);
+    buf.append(temp.c_str(), 1);
+    buf.append(ipaddress);
     buf.append(temp.c_str(), 1);
     buf.append(action);
     buf.append(temp.c_str(), 1);

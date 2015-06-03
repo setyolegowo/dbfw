@@ -248,6 +248,36 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
             logEvent(SQL_DEBUG, "[%d][MySQL] DATABASE: %s\n", iProxyId, db_name.c_str());
         }
 
+        DBFWConfig * conf = DBFWConfig::getInstance();
+        if(conf->re_perm_engine) {
+            DBPerm perm;
+            std::string uri_resource = itoa(iProxyId);
+            sql_action.assign("select");
+            perm.setIP(db_user_ip);
+            perm.addAttr(db_name);
+            perm.checkout(db_user, sql_action, uri_resource);
+            if(perm.error_result) {
+                logRisk(ERR, "[%d][MySQL] Permission ERROR. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                    iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                return false;
+            } else {
+                int get_result = perm.getResult();
+                if(get_result > 0) {
+                    if(get_result == 1) {
+                        logRisk(INFO, "[%d][MySQL] Permission DENIED. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                            iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                        return false;
+                    } else {
+                        logRisk(INFO, "[%d][MySQL] ELSE Permission. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                            iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                    }
+                } else {
+                    logRisk(DEBUG, "[%d][MySQL] Permission PERMIT. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                        iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                }
+            }
+        }
+
         first_request = false;
         SecondPacket = true;
 
@@ -269,6 +299,47 @@ bool MySQLConnection::ParseRequestPacket(const unsigned char* data, size_t& requ
     else if (type == MYSQL_DB) {
         db_new_name.clear();
         db_new_name.append((const char *) data + 5, request_size - 5);
+        DBFWConfig * conf = DBFWConfig::getInstance();
+        if(conf->re_perm_engine) {
+            DBPerm perm;
+            bool failed = false;
+            std::string uri_resource = itoa(iProxyId);
+            sql_action.assign("select");
+            perm.setIP(db_user_ip);
+            perm.addAttr(db_new_name);
+            perm.checkout(db_user, sql_action, uri_resource);
+            if(perm.error_result) {
+                logRisk(ERR, "[%d][MySQL] Permission ERROR. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                    iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                failed = true;
+            } else {
+                int get_result = perm.getResult();
+                if(get_result > 0) {
+                    if(get_result == 1) {
+                        logRisk(INFO, "[%d][MySQL] Permission DENIED. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                            iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                        failed = true;
+                    } else {
+                        logRisk(INFO, "[%d][MySQL] ELSE Permission. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                            iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                    }
+                } else {
+                    logRisk(DEBUG, "[%d][MySQL] Permission PERMIT. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                        iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                }
+            }
+            if(failed == true) {
+                blockResponse(response);
+                if (response_in.size() != 0)
+                    // push it to the server response parsing queue
+                    response_in.append(response.c_str(), response.size());
+                else
+                    // push it to the client
+                    response_out.append(response.c_str(), response.size());
+
+                hasResponse = true;
+            }
+        }
         logEvent(SQL_DEBUG, "[%d][MySQL] DATABASE: %s\n", iProxyId, db_new_name.c_str());
     } else if (type == MYSQL_QUERY) {
         // query must not be empty
@@ -460,6 +531,7 @@ bool MySQLConnection::parseResponse(std::string & response)
         state = 0;
         logEvent(V_DEBUG, "[%d][MySQL] Number of fields: %d\n", iProxyId, number_of_fields);
         DBFWConfig * conf = DBFWConfig::getInstance();
+        std::string masking_column = "";
         while((start + response_size) <= full_size) {
             if(conf->re_perm_engine && start > 0 && lastCommandId == MYSQL_QUERY) {
                 if(state < number_of_fields) {
@@ -506,6 +578,16 @@ bool MySQLConnection::parseResponse(std::string & response)
                                 {
                                     map_perm[_it->second] = (int) it->second;
                                 }
+                                if(it->second == 1) {
+                                    masking_column.append(it->first);
+                                    masking_column.append(" ", 1);
+                                }
+                            }
+                            if(masking_column.size() > 0) {
+                                logRisk(ERR, "[%d][PGSQL] Masking: (%s):%s\n", iProxyId, it_map->first.c_str(), masking_column.c_str());
+                                masking_column.clear();
+                            } else {
+                                logRisk(ERR, "[%d][PGSQL] Masking: No column masked.\n", iProxyId);
                             }
                         }
                         // }

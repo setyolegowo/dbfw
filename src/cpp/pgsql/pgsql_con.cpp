@@ -15,7 +15,8 @@
 
 static SQLPatterns pgsql_patterns;
 static unsigned char PGSQL_CANCEL[] = {0x00, 0x00, 0x00, 0x0F, 0x04, 0xD2, 0x16, 0xDF};
-static bool pg_parse_protocol_params(const unsigned char * data, size_t request_size, size_t & ind, const char * const option, unsigned char option_len, std::string & result);
+static bool pg_parse_protocol_params(const unsigned char * data, size_t request_size, size_t & ind, 
+    const char * const option, unsigned char option_len, std::string & result);
 static void pg_parse_string(const unsigned char * data, size_t start, size_t & offset, std::string & buff);
 static void maskResult(size_t data_pos, size_t data_length, Buffer& output);
 
@@ -312,6 +313,35 @@ bool PgSQLConnection::parse_request(const unsigned char * data, size_t request_s
             // db = dbmap_find(iProxyId, db_name, "pgsql");
         // }
         first_request = false;
+        DBFWConfig * conf = DBFWConfig::getInstance();
+        if(conf->re_perm_engine) {
+            DBPerm perm;
+            std::string uri_resource = itoa(iProxyId);
+            sql_action.assign("select");
+            perm.setIP(db_user_ip);
+            perm.addAttr(db_name);
+            perm.checkout(db_user, sql_action, uri_resource);
+            if(perm.error_result) {
+                logRisk(ERR, "[%d][PGSQL] Permission ERROR. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                    iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                return false;
+            } else {
+                int get_result = perm.getResult();
+                if(get_result > 0) {
+                    if(get_result == 1) {
+                        logRisk(INFO, "[%d][PGSQL] Permission DENIED. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                            iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                        return false;
+                    } else {
+                        logRisk(INFO, "[%d][PGSQL] ELSE Permission. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                            iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                    }
+                } else {
+                    logRisk(DEBUG, "[%d][PGSQL] Permission PERMIT. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                        iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                }
+            }
+        }
         return true;
     }
 
@@ -491,6 +521,7 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
     bool check_row = false;
     size_t field_count = 0;
     std::vector<std::string> mask_vector;
+    DBFWConfig * conf = DBFWConfig::getInstance();
     while(start + 4 < max_response_size)
     {
         type = data[start];
@@ -532,35 +563,38 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
                 } break;
             case PGSQL_SRV_GETROW: {
                 logEvent(error_type, "[%d][PGSQL] Parse Response: ROW DESCRIPTION command\n", iProxyId);
-                if(sql_tabel.size() > 0) {
-                    std::size_t found = sql_tabel.find(' ');
-                    if(found == std::string::npos) {
-                        field_count = data[5+start] << 8 | data[6+start];
-                        size_t offset = 7;
+                if(conf->re_perm_engine) {
+                    if(sql_tabel.size() > 0) {
+                        std::size_t found = sql_tabel.find(' ');
+                        if(found == std::string::npos) {
+                            field_count = data[5+start] << 8 | data[6+start];
+                            size_t offset = 7;
 
-                        logEvent(VV_DEBUG, "[%d][PGSQL] Field Size: %d\n", iProxyId, field_count);
-                        while(start+offset < start + response_size) { //-V112
-                            pg_parse_string(data, start, offset, str_value);
-                            logEvent(VV_DEBUG, "[%d][PGSQL] Get Field Name: %s\n", iProxyId, str_value.c_str());
-                            perm.addAttr(str_value);
-                            mask_vector.push_back(str_value);
-                            offset+=18;
+                            logEvent(VV_DEBUG, "[%d][PGSQL] Field Size: %d\n", iProxyId, field_count);
+                            while(start+offset < start + response_size) { //-V112
+                                pg_parse_string(data, start, offset, str_value);
+                                logEvent(VV_DEBUG, "[%d][PGSQL] Get Field Name: %s\n", iProxyId, str_value.c_str());
+                                perm.addAttr(str_value);
+                                mask_vector.push_back(str_value);
+                                offset+=18;
+                            }
+                            std::string uri_resource = itoa(iProxyId);
+                            uri_resource.append("/"); uri_resource.append(db_name);
+                            uri_resource.append("/"); uri_resource.append(sql_tabel);
+                            perm.setIP(db_user_ip);
+                            perm.checkout(db_user, sql_action, uri_resource);
+                            if(perm.error_result) {
+                                logRisk(ERR, "[%d][PGSQL] Permission ERROR. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                                    iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+                            } else
+                                check_row = true;
+                        } else {
+                            logRisk(ERR, "[%d] Permission Check Failed. The query uses more than one table: %s\n",
+                                iProxyId, sql_tabel.c_str());
                         }
-                        std::string uri_resource = itoa(iProxyId);
-                        uri_resource.append("/"); uri_resource.append(db_name);
-                        uri_resource.append("/"); uri_resource.append(sql_tabel);
-                        perm.checkout(db_user, sql_action, uri_resource);
-                        if(perm.error_result) {
-                            logRisk(ERR, "[%d][PGSQL] Permission ERROR.  DB:%s, ACTION:%s, RESOURCE:%s\n",
-                                iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
-                        } else
-                            check_row = true;
                     } else {
-                        logRisk(ERR, "[%d] Permission Check Failed. The query uses more than one table: %s\n",
-                            iProxyId, sql_tabel.c_str());
+                        logRisk(ERR, "[%d] Permission Check Failed. Table size is zero.\n", iProxyId);
                     }
-                } else {
-                    logRisk(ERR, "[%d] Permission Check Failed. Table size is zero.\n", iProxyId);
                 }
                 } break;
             case PGSQL_ROW_DATA: {
@@ -568,6 +602,7 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
                 if(check_row == true && field_count > 0) {
                     size_t data_length = 0;
                     size_t offset = 7;
+                    std::string masking_column = "";
                     field_count = data[5+start] << 8 | data[6+start];
                     std::map<std::string, unsigned char>::iterator pointer;
                     for(size_t i=0; i < field_count; i++) {
@@ -577,13 +612,22 @@ bool PgSQLConnection::parse_response(const unsigned char * data, size_t& used_si
                         if(data_length == 0xFFFFFFFF) continue;
                         try {
                             pointer = perm.mask_map.find(mask_vector[i]);
-                            if(pointer != perm.mask_map.end() && pointer->second == 1)
+                            if(pointer != perm.mask_map.end() && pointer->second == 1) {
+                                masking_column.append(mask_vector[i]);
+                                masking_column.append(" ", 1);
                                 maskResult(start + offset, data_length, response_in);
+                            }
                         } catch (const std::out_of_range& oor) {
                             logEvent(ERR, "[%d][PGSQL] Out of Range error: %s\n", oor.what());
                             break;
                         }
                         offset+=data_length;
+                    }
+                    if(masking_column.size() > 0) {
+                        logRisk(ERR, "[%d][PGSQL] Masking: (%s): %s\n", iProxyId, sql_tabel.c_str(), masking_column.c_str());
+                        masking_column.clear();
+                    } else {
+                        logRisk(ERR, "[%d][PGSQL] Masking: No column masked.\n", iProxyId);
                     }
                 }
                 } break;

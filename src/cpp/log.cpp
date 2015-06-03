@@ -265,7 +265,8 @@ void logHex (ErrorType type, const unsigned char * data, int size)
 
     for ( i = 0; i < lines; i++ ) {
         // fprintf(log_file, error);
-        fprintf(log_file,"[%02d/%s/%02d %d:%02d:%02d] %s", now->tm_mday, month_str[now->tm_mon], now->tm_year+1900,now->tm_hour, now->tm_min, now->tm_sec, error );
+        fprintf(log_file,"[%02d/%s/%02d %d:%02d:%02d] %s", now->tm_mday, month_str[now->tm_mon], now->tm_year+1900,
+            now->tm_hour, now->tm_min, now->tm_sec, error );
         printLine(data+i*16, 16);
     }
 
@@ -273,7 +274,8 @@ void logHex (ErrorType type, const unsigned char * data, int size)
     int ord = (((unsigned char) (size<<4)) >> 4);
     if ( ord > 0 ) {
         // fprintf(log_file, error);
-        fprintf(log_file, "[%02d/%s/%02d %d:%02d:%02d] %s", now->tm_mday, month_str[now->tm_mon], now->tm_year+1900, now->tm_hour, now->tm_min, now->tm_sec, error );
+        fprintf(log_file, "[%02d/%s/%02d %d:%02d:%02d] %s", now->tm_mday, month_str[now->tm_mon], now->tm_year+1900,
+            now->tm_hour, now->tm_min, now->tm_sec, error );
         printLine(data+i*16, ord);
     }
 
@@ -292,9 +294,10 @@ bool logAlert(int proxy_id, std::string & dbname, std::string & dbuser, std::str
 
     logReload(4);
 
-    fprintf(log_alert, "[%02d/%s/%02d %d:%02d:%02d] %d:%d:%d\n", now->tm_mday, month_str[now->tm_mon],
+    fprintf(log_alert, "[%02d/%s/%02d %d:%02d:%02d][%d] Risk:%d Block:%d\n", now->tm_mday, month_str[now->tm_mon],
         now->tm_year+1900, now->tm_hour, now->tm_min, now->tm_sec, proxy_id, risk, block);
-    fprintf(log_alert, "%s:%s@%s\nq:%s\np:%s\nr:%s", dbuser.c_str(), dbuserip.c_str(), dbname.c_str(), query.c_str(), pattern.c_str(), reason.c_str());
+    fprintf(log_alert, "%s@%s/%s\nq:%s\np:%s\nr:%s\n", dbuser.c_str(), dbuserip.c_str(), dbname.c_str(), 
+        query.c_str(), pattern.c_str(), reason.c_str());
 
     fflush(log_alert);
 

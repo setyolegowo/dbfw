@@ -25,12 +25,14 @@ public:
     virtual ~DBPerm();
 
     bool addAttr(std::string& attr);
+    bool setIP(std::string& ip);
     bool checkout(std::string& subject, std::string& action, std::string& uri);
     bool oneCheckPermission(std::string& subject, std::string& action, std::string& uri);
     int getResult();
 
 private:
     std::vector<std::string> attr_list;
+    std::string ipaddress;
     bool _connect(std::string& buff);
     bool _parsingResult(const char *, int size);
 

@@ -107,6 +107,7 @@ bool Connection::check_query(std::string & query)
     if(conf->re_perm_engine) {
         DBPerm perm;
         std::string uri_resource = itoa(iProxyId);
+        perm.setIP(db_user_ip);
         if(sql_tabel.size() > 0) {
             perm.addAttr(sql_tabel);
             uri_resource.append("/");
@@ -116,22 +117,23 @@ bool Connection::check_query(std::string & query)
         }
         perm.checkout(db_user, sql_action, uri_resource);
         if(perm.error_result) {
-            logRisk(ERR, "[%d] Permission ERROR.  DB:%s, ACTION:%s, RESOURCE:%s\n",
-                iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
+            logRisk(ERR, "[%d] Permission ERROR. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
+            return false;
         } else {
             int get_result = perm.getResult();
             if(get_result > 0) {
                 if(get_result == 1) {
-                    logRisk(INFO, "[%d] Permission DENIED. DB:%s, ACTION:%s, RESOURCE:%s\n",
-                        iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
+                    logRisk(INFO, "[%d] Permission DENIED. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                        iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
                     return false;
                 } else {
-                    logRisk(INFO, "[%d] ELSE Permission.   DB:%s, ACTION:%s, RESOURCE:%s\n",
-                        iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
+                    logRisk(INFO, "[%d] ELSE Permission. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                        iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
                 }
             } else {
-                logRisk(DEBUG, "[%d] Permission PERMIT. DB:%s, ACTION:%s, RESOURCE:%s\n",
-                    iProxyId, db_user.c_str(), sql_action.c_str(), uri_resource.c_str());
+                logRisk(DEBUG, "[%d] Permission PERMIT. USER:%s@%s, ACTION:%s, RESOURCE:%s\n",
+                    iProxyId, db_user.c_str(), db_user_ip.c_str(), sql_action.c_str(), uri_resource.c_str());
             }
         }
     }
