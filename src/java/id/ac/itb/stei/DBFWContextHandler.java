@@ -246,6 +246,11 @@ public final class DBFWContextHandler {
                 "</Attribute>" +
                 "</Attributes>" +
                 "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:resource\">" +
+                "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-location\" IncludeInResult=\"true\">" +
+                "<AttributeValue DataType=\"urn:oasis:names:tc:xacml:3.0:data-type:ipAddress-value\">" + ipclient + "</AttributeValue>" +
+                "</Attribute>" +
+                "</Attributes>" +
+                "<Attributes Category=\"urn:oasis:names:tc:xacml:3.0:attribute-category:resource\">" +
                 "<Attribute AttributeId=\"urn:oasis:names:tc:xacml:1.0:resource:resource-id\" IncludeInResult=\"true\">" +
                 "<AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">" + tableResource + "</AttributeValue>" +
                 "</Attribute>" +
