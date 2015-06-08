@@ -1,13 +1,13 @@
-<Policy xmlns="urn:oasis:names:tc:xacml:3.0:core:schema:wd-17" PolicyId="ID_1_Policy" RuleCombiningAlgId="urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:first-applicable" Version="1.0">
+<Policy xmlns="urn:oasis:names:tc:xacml:3.0:core:schema:wd-17" PolicyId="ID_1_Database_DVWA_Info_Columns_Policy" RuleCombiningAlgId="urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:first-applicable" Version="1.0">
    <Target>
       <AnyOf>
          <AllOf>
             <Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">1</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">1/dvwa/COLUMNS</AttributeValue>
                <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
             </Match>
-            <Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-regexp-match">
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">select|show</AttributeValue>
+            <Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">show</AttributeValue>
                <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:action:action-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:action" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
             </Match>
          </AllOf>
@@ -33,9 +33,12 @@
       <Condition>
          <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of">
             <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-bag">
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">dvwa</AttributeValue>
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">mysql</AttributeValue>
-               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">mysql_native_password</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">COLUMN_NAME</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">COLUMN_TYPE</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">COLUMN_DEFAULT</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">IS_NULLABLE</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">COLUMN_KEY</AttributeValue>
+               <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">EXTRA</AttributeValue>
             </Apply>
             <AttributeDesignator AttributeId="urn:oasis:names:tc:xacml:1.0:resource:resource-id" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:column" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="true"/>
          </Apply>
