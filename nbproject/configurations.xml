@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="95">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <logicalFolder name="cpp" displayName="cpp" projectFiles="true" root="src/cpp">
+      <logicalFolder name="lib" displayName="lib" projectFiles="true">
+        <itemPath>src/cpp/lib/Makefile</itemPath>
+        <itemPath>src/cpp/lib/README</itemPath>
+      </logicalFolder>
+      <logicalFolder name="mysql" displayName="mysql" projectFiles="true">
+        <itemPath>src/cpp/mysql/mysql_con.cpp</itemPath>
+        <itemPath>src/cpp/mysql/mysql_con.hpp</itemPath>
+      </logicalFolder>
+      <logicalFolder name="parser" displayName="parser" projectFiles="true">
+        <itemPath>src/cpp/parser/Makefile</itemPath>
+        <itemPath>src/cpp/parser/expression.hpp</itemPath>
+        <itemPath>src/cpp/parser/parser.cpp</itemPath>
+        <itemPath>src/cpp/parser/parser.hpp</itemPath>
+        <itemPath>src/cpp/parser/sql.cpp</itemPath>
+        <itemPath>src/cpp/parser/sql.lex</itemPath>
+        <itemPath>src/cpp/parser/sql.output</itemPath>
+        <itemPath>src/cpp/parser/sql.tab.cpp</itemPath>
+        <itemPath>src/cpp/parser/sql.tab.hpp</itemPath>
+        <itemPath>src/cpp/parser/sql.ypp</itemPath>
+      </logicalFolder>
+      <logicalFolder name="pgsql" displayName="pgsql" projectFiles="true">
+        <itemPath>src/cpp/pgsql/pgsql_con.cpp</itemPath>
+        <itemPath>src/cpp/pgsql/pgsql_con.hpp</itemPath>
+      </logicalFolder>
+      <itemPath>src/cpp/Makefile</itemPath>
+      <itemPath>src/cpp/buffer.cpp</itemPath>
+      <itemPath>src/cpp/buffer.hpp</itemPath>
+      <itemPath>src/cpp/config.cpp</itemPath>
+      <itemPath>src/cpp/config.hpp</itemPath>
+      <itemPath>src/cpp/connection.cpp</itemPath>
+      <itemPath>src/cpp/connection.hpp</itemPath>
+      <itemPath>src/cpp/dbfw</itemPath>
+      <itemPath>src/cpp/dbfw.cpp</itemPath>
+      <itemPath>src/cpp/dbfw.hpp</itemPath>
+      <itemPath>src/cpp/dbperm.cpp</itemPath>
+      <itemPath>src/cpp/dbperm.hpp</itemPath>
+      <itemPath>src/cpp/log.cpp</itemPath>
+      <itemPath>src/cpp/log.hpp</itemPath>
+      <itemPath>src/cpp/main.cpp</itemPath>
+      <itemPath>src/cpp/misc.cpp</itemPath>
+      <itemPath>src/cpp/misc.hpp</itemPath>
+      <itemPath>src/cpp/normalization.cpp</itemPath>
+      <itemPath>src/cpp/normalization.hpp</itemPath>
+      <itemPath>src/cpp/patterns.cpp</itemPath>
+      <itemPath>src/cpp/patterns.hpp</itemPath>
+      <itemPath>src/cpp/proxymap.cpp</itemPath>
+      <itemPath>src/cpp/proxymap.hpp</itemPath>
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+      <itemPath>src/cpp/Makefile</itemPath>
+      <itemPath>src/cpp/parser/Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
+  <sourceRootList>
+    <Elem>src/cpp</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>false</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <flagsDictionary>
+        <element flagsID="0" commonFlags="-std=c++11"/>
+      </flagsDictionary>
+      <codeAssistance>
+        <includeAdditional>true</includeAdditional>
+      </codeAssistance>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>.</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+          <executablePath>src/cpp/dbfw</executablePath>
+        </makeTool>
+      </makefileType>
+      <folder path="cpp/mysql">
+        <ccTool>
+          <incDir>
+            <pElem>src/cpp</pElem>
+          </incDir>
+        </ccTool>
+      </folder>
+      <folder path="cpp/pgsql">
+        <ccTool>
+          <incDir>
+            <pElem>src/cpp</pElem>
+          </incDir>
+        </ccTool>
+      </folder>
+      <item path="src/cpp/Makefile" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/cpp/buffer.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/config.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/connection.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/dbfw" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/cpp/dbfw.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/dbperm.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/lib/Makefile" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/cpp/lib/README" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/cpp/log.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/main.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/misc.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/mysql/mysql_con.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/normalization.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/parser/Makefile" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/cpp/parser/parser.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/parser/sql.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/parser/sql.lex" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/cpp/parser/sql.output" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/cpp/parser/sql.tab.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/parser/sql.ypp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/cpp/patterns.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/pgsql/pgsql_con.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/cpp/proxymap.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>
