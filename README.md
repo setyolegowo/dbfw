@@ -39,6 +39,14 @@ This program using XACML for managing access control. So, the Java program need 
 
 For CPP, you just execute `make` within this directory. And for Java, please use Netbeans IDE for compiling this project to Jar achive.
 
+## Prepare Environment
+
+- Install MySQL and PostgreSQL in any instance (free to attached with firewall or not).
+- If MySQL or PostgreSQL is in different instance:
+  - Check Inbound and Outbound, instance with MySQL server should open its MySQL port (DEFAULT: 3306)
+  - Grant selected user to accept from another instance. Don't forget to flush privileges.
+  - To increase secureness, make database instance and firewall inside VPC.
+
 # How to run
 
 Before run the database firewall, you should create blank file `/var/log/dbfw.log`. That URI is written in configuration file `dbfw.conf`. And then you run with `./dbfw -p <configuration folder>`.
